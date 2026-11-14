@@ -1,0 +1,287 @@
+{
+ "class": "rug_pull",
+ "expect": {
+  "files/list_dir": "ok",
+  "files/read_file": "ok",
+  "issues/get_issue": "rug_pull",
+  "issues/list_issues": "rug_pull"
+ },
+ "id": "rug_pull_01",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "files-pub",
+    "server_id": "files",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lee un archivo del directorio de trabajo.",
+      "input_schema": {
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ],
+       "type": "object"
+      },
+      "name": "read_file",
+      "tool_hash": "sha256:bd4fffbcfc90bc131f789cc02d1f886aafd904a72eedea901e4239593498e51d"
+     },
+     {
+      "description": "Lista un directorio.",
+      "input_schema": {
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ],
+       "type": "object"
+      },
+      "name": "list_dir",
+      "tool_hash": "sha256:30ee9529500d58a945225e06a218dd7eb655d6672477755c4daf0d7393fe9922"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4=",
+   "sig": "T9+/d3bUukjnQFWHweQp51ADh1vOAjm8Sprzk9PmyXnoiTkXdv8C8Nf0sU03Yyi+xd/nN075s0/m8PQLh/EtAg=="
+  },
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "issues-pub",
+    "server_id": "issues",
+    "server_version": "2.0.0",
+    "tools": [
+     {
+      "description": "Lista los issues abiertos de un proyecto.",
+      "input_schema": {
+       "properties": {
+        "project": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "project"
+       ],
+       "type": "object"
+      },
+      "name": "list_issues",
+      "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+     },
+     {
+      "description": "Devuelve el detalle de un issue.",
+      "input_schema": {
+       "properties": {
+        "id": {
+         "type": "integer"
+        }
+       },
+       "required": [
+        "id"
+       ],
+       "type": "object"
+      },
+      "name": "get_issue",
+      "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:krlCbGw/Pcw8H7s4vB+wXX0Cg1TIrK5Mk6QMIXoPFy0=",
+   "sig": "GYI/b49QWNvPCfG/ku8gIhiwqHNyFQuAAkGFQsdeUfvvlHz6BpK+fKsZ/I3rR3bmlpJAFscxQsw3tmAmyICDAQ=="
+  }
+ ],
+ "note": "versión nueva firmada con otra llave, que el publicador ya agregó como de confianza",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "files-pub",
+     "server_id": "files",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lee un archivo del directorio de trabajo.",
+       "input_schema": {
+        "properties": {
+         "path": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "path"
+        ],
+        "type": "object"
+       },
+       "name": "read_file",
+       "tool_hash": "sha256:bd4fffbcfc90bc131f789cc02d1f886aafd904a72eedea901e4239593498e51d"
+      },
+      {
+       "description": "Lista un directorio.",
+       "input_schema": {
+        "properties": {
+         "path": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "path"
+        ],
+        "type": "object"
+       },
+       "name": "list_dir",
+       "tool_hash": "sha256:30ee9529500d58a945225e06a218dd7eb655d6672477755c4daf0d7393fe9922"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4=",
+    "sig": "T9+/d3bUukjnQFWHweQp51ADh1vOAjm8Sprzk9PmyXnoiTkXdv8C8Nf0sU03Yyi+xd/nN075s0/m8PQLh/EtAg=="
+   },
+   "server_id": "files",
+   "tools": [
+    {
+     "description": "Lee un archivo del directorio de trabajo.",
+     "input_schema": {
+      "properties": {
+       "path": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "path"
+      ],
+      "type": "object"
+     },
+     "name": "read_file"
+    },
+    {
+     "description": "Lista un directorio.",
+     "input_schema": {
+      "properties": {
+       "path": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "path"
+      ],
+      "type": "object"
+     },
+     "name": "list_dir"
+    }
+   ]
+  },
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "issues-pub",
+     "server_id": "issues",
+     "server_version": "2.0.0",
+     "tools": [
+      {
+       "description": "Lista los issues abiertos de un proyecto.",
+       "input_schema": {
+        "properties": {
+         "project": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "project"
+        ],
+        "type": "object"
+       },
+       "name": "list_issues",
+       "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+      },
+      {
+       "description": "Devuelve el detalle de un issue.",
+       "input_schema": {
+        "properties": {
+         "id": {
+          "type": "integer"
+         }
+        },
+        "required": [
+         "id"
+        ],
+        "type": "object"
+       },
+       "name": "get_issue",
+       "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:krlCbGw/Pcw8H7s4vB+wXX0Cg1TIrK5Mk6QMIXoPFy0=",
+    "sig": "GYI/b49QWNvPCfG/ku8gIhiwqHNyFQuAAkGFQsdeUfvvlHz6BpK+fKsZ/I3rR3bmlpJAFscxQsw3tmAmyICDAQ=="
+   },
+   "server_id": "issues",
+   "tools": [
+    {
+     "description": "Lista los issues abiertos de un proyecto.",
+     "input_schema": {
+      "properties": {
+       "project": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "project"
+      ],
+      "type": "object"
+     },
+     "name": "list_issues"
+    },
+    {
+     "description": "Devuelve el detalle de un issue.",
+     "input_schema": {
+      "properties": {
+       "id": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "id"
+      ],
+      "type": "object"
+     },
+     "name": "get_issue"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "issues/list_issues",
+  "issues/get_issue"
+ ],
+ "trust": {
+  "pins": {
+   "issues": {
+    "manifest_hash": "sha256:379a6fe58e41546babdad092e9eae047bc960a91666410134594550637e1af4e",
+    "pubkey": "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo="
+   }
+  },
+  "publishers": {
+   "files-pub": [
+    "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4="
+   ],
+   "issues-pub": [
+    "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo=",
+    "ed25519:krlCbGw/Pcw8H7s4vB+wXX0Cg1TIrK5Mk6QMIXoPFy0="
+   ]
+  }
+ }
+}

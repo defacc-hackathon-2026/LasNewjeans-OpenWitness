@@ -1,0 +1,10 @@
+§9.3 maliciosos bloqueados: ToolFilter 47/47 · cliente MCP 47/47 · gateway 47/47 · tool-check deniega 47/47
+  Sin firma                                               9/9   9/9   9/9  hook  9/9 
+  Firma inválida                                          9/9   9/9   9/9  hook  9/9 
+  Llave fuera del trust store                             9/9   9/9   9/9  hook  9/9 
+  Descripción o esquema modificados tras firmar           5/5   5/5   5/5  hook  5/5 
+  Rug pull: versión nueva firmada con otra llave         10/10 10/10 10/10 hook 10/10
+  Tool shadowing: nombre de otro servidor                 5/5   5/5   5/5  hook  5/5 
+  Firmado por publicador confiable pero envenenado (L5)   0/5   0/5   0/5  hook  0/5   (no se bloquea: límite L5)
+  Legítimas aceptadas: 96/96 (falsos positivos: ToolFilter 0, cliente MCP 0, gateway 0) · internas de Claude Code 840/840
+  Motivo de la decisión igual al esperado: 296/296

@@ -20,4 +20,6 @@ Todo corre en local, con servidores MCP de demo, datos sintéticos y dominios `.
 
    Las peticiones reales quedan como fixtures de regresión.
 
-Reproducir: `uv sync && uv run pytest -q`, y después `uv run python -m bench.tamper`, `bench.latency`, `bench.local_model` y `bench.claude_code_probe` (README).
+   Con `owit exec` y los hooks (G9, `bench/claude_code_hooks_probe.py`), un servidor MCP firmado y otro que cambia su descripción después de firmar: el prompt llega firmado, la herramienta alterada no llega al modelo y el hook `PreToolUse` la deniega.
+
+Reproducir: `uv sync && uv run pytest -q`, y después `uv run python -m bench.tamper`, `bench.latency`, `bench.manifests`, `bench.run_bench`, `bench.local_model`, `bench.claude_code_probe` y `bench.claude_code_hooks_probe` (README).

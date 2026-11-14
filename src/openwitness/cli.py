@@ -20,6 +20,8 @@ llm_app = typer.Typer(no_args_is_help=True, help="Perfiles de LLM (§7.7)")
 app.add_typer(gateway_app, name="gateway")
 app.add_typer(bench_app, name="bench")
 app.add_typer(llm_app, name="llm")
+manifest_app = typer.Typer(no_args_is_help=True, help="Manifiestos MCP firmados (§6.3)")
+app.add_typer(manifest_app, name="manifest")
 
 DATA = Path(os.environ.get("OWIT_DATA", "data"))
 REPO = Path(__file__).resolve().parents[2]
@@ -177,12 +179,127 @@ def bench_latency(out: Path = typer.Option(Path("results")), n: int = 1000):
     main(["--out", str(out), "--n", str(n)])
 
 
+@bench_app.command("manifests")
+def bench_manifests(out: Path = typer.Option(Path("results")),
+                    regen: bool = typer.Option(False, "--regen", help="regenerar bench/manifests_corpus/")):
+    """§9.3: manifiestos envenenados bloqueados."""
+    from bench.manifests import main
+    main(["--out", str(out)] + (["--regen"] if regen else []))
+
+
 @llm_app.command("list")
 def llm_list(config: Path = typer.Option(Path("owit.toml"))):
     from .llm.config import load_profiles, redact_headers
     for name, p in load_profiles(config).items():
         typer.echo(f"{name:<16} {p.provider:<17} {p.model:<28} {p.base_url or ''} "
                    f"{json.dumps(redact_headers(p.headers)) if p.headers else ''}")
+
+
+@llm_app.command("check")
+def llm_check(profile: str = typer.Option(..., "--profile"), config: Path = typer.Option(Path("owit.toml"))):
+    """Conectividad, modelos y una llamada con JSON (§7.7). Nunca imprime secretos."""
+    from .llm.client import check_profile
+    from .llm.config import load_profiles
+    profs = load_profiles(config)
+    if profile not in profs:
+        raise typer.BadParameter(f"perfiles: {', '.join(profs)}")
+    res = check_profile(profs[profile])
+    typer.echo(json.dumps(res, indent=1, ensure_ascii=False))
+    raise typer.Exit(0 if res.get("ok") else 1)
+
+
+# ---------------------------------------------------------------- atribución (Andres, §7.9)
+
+def _verify_for_attribution(ledger: Path, data: Path, registry: Path, gateway_pubkey: Optional[str]):
+    from .ledger import BlobStore, MockAnchor, verify_ledger
+    blobs = BlobStore(data / "blobs")
+    pub = gateway_pubkey or _gateway_key(data).public_str()
+    rep = verify_ledger(ledger, blobs, pub, _registry(registry), MockAnchor(data / "anchor" / "mock_anchor.jsonl"))
+    return blobs, rep
+
+
+@app.command("attribute")
+def attribute_cmd(ledger: Path, seq: Optional[int] = typer.Option(None, help="seq del tool_call; por defecto, todos"),
+                  data: Path = typer.Option(DATA), registry: Path = typer.Option(Path("keys/registry.json")),
+                  gateway_pubkey: Optional[str] = typer.Option(None),
+                  judge: Optional[str] = typer.Option(None, help="perfil del juez (G10)"),
+                  no_judge: bool = typer.Option(False, "--no-judge", help="solo reglas"),
+                  config: Path = typer.Option(Path("owit.toml")), as_json: bool = typer.Option(False, "--json")):
+    """¿Lo pidió el usuario o lo inyectó la herramienta Z? Integridad primero, luego reglas (y juez)."""
+    from .attribution import attribute_evidence, build_evidence
+    from .ledger import load_records
+    blobs, rep = _verify_for_attribution(ledger, data, registry, gateway_pubkey)
+    llm = None
+    if judge and not no_judge:
+        from .llm.config import load_profiles, make_client
+        llm = make_client(load_profiles(config)[judge])
+    recs = load_records(ledger)
+    seqs = [seq] if seq is not None else [r.seq for r in recs if r.kind == "tool_call"]
+    out = []
+    for s in seqs:
+        ev = build_evidence(ledger, blobs, s, rep, recs)
+        v, trace = attribute_evidence(ev, llm, "rules+judge" if llm else "rules")
+        d = v.to_dict() | {"seq": s, "tool": ev.tool, "args": ev.args, "rule": trace.get("rule")}
+        out.append(d)
+        if not as_json:
+            extra = " · parcial: acción pedida por el usuario, argumento aportado por la herramienta" if v.partial else ""
+            typer.echo(f"seq={s} {ev.tool} → {v.label}({v.source or '-'}) · no repudio={v.non_repudiable} · "
+                       f"regla {trace.get('rule')} · método {v.method}{extra}")
+            for arg, provs in v.arg_provenance.items():
+                typer.echo(f"    {arg}: {', '.join(provs) or 'no aparece en el contexto'}")
+    if as_json:
+        typer.echo(json.dumps(out, indent=1, ensure_ascii=False))
+    if not rep.ok:
+        typer.echo(f"integridad: FALLA desde seq={rep.first_error_seq()}", err=True)
+
+
+@app.command("show")
+def show_cmd(ledger: Path, seq: int = typer.Option(...), data: Path = typer.Option(DATA),
+             registry: Path = typer.Option(Path("keys/registry.json")),
+             gateway_pubkey: Optional[str] = typer.Option(None), width: int = 160):
+    """Reconstruye y muestra el contexto exacto que vio el modelo antes de la acción `seq`."""
+    from .attribution import build_evidence
+    blobs, rep = _verify_for_attribution(ledger, data, registry, gateway_pubkey)
+    ev = build_evidence(ledger, blobs, seq, rep)
+    typer.echo(f"acción seq={seq}: {ev.tool} {json.dumps(ev.args, ensure_ascii=False)[:width]}")
+    typer.echo(f"integridad hasta seq={seq}: {'OK' if ev.integrity_ok else 'FALLA'} · "
+               f"llm_request seq={ev.request.seq if ev.request else '-'}")
+    for i in ev.items:
+        frag = i.fragment.replace("\n", " ⏎ ")
+        typer.echo(f"  [{i.seq:>3}] {i.provenance:<22} {i.kind:<18} {frag[:width]}")
+
+
+agent_app = typer.Typer(no_args_is_help=True, help="Agente de referencia (§7.8)")
+app.add_typer(agent_app, name="agent")
+
+
+@agent_app.command("run")
+def agent_cmd(scenario: Path = typer.Option(..., help="bench/scenarios/<id>.yaml"),
+              upstream: str = typer.Option("fake", help="fake o un perfil de owit.toml"),
+              config: Path = typer.Option(Path("owit.toml"))):
+    """Ejecuta un escenario con refagent a través del gateway en proceso y atribuye la acción esperada."""
+    import asyncio
+    import yaml
+    from bench.run_bench import run_one
+    from .llm.config import load_profiles, make_upstream
+    s = yaml.safe_load(scenario.read_text(encoding="utf-8"))
+    up, model = None, "fake-model"
+    if upstream != "fake":
+        prof = load_profiles(config)[upstream]
+        up, model = make_upstream(prof), prof.model
+    r = asyncio.run(run_one(s, up, model))
+    typer.echo(json.dumps({k: r[k] for k in ("id", "occurred", "integrity_ok", "tool_calls", "verdicts", "error")},
+                          indent=1, ensure_ascii=False))
+
+
+@bench_app.command("attribution")
+def bench_attribution(out: Path = typer.Option(Path("results")), upstream: str = typer.Option("fake"),
+                      judge: Optional[str] = typer.Option(None), runs: int = 1,
+                      only: Optional[str] = typer.Option(None)):
+    """§9.2: precisión de la atribución sobre los 35 escenarios."""
+    from bench.run_bench import main
+    main(["--out", str(out), "--upstream", upstream, "--runs", str(runs)] + (["--judge", judge] if judge else [])
+         + (["--only", only] if only else []))
 
 
 @app.command("fake")
@@ -192,6 +309,161 @@ def fake_serve(port: int = 8788, script: Optional[Path] = None):
     from .llm.fake import ScriptedResponder, fake_app
     uvicorn.run(fake_app(ScriptedResponder.load(script) if script else None), host="127.0.0.1", port=port,
                 log_level="warning")
+
+
+# ---------------------------------------------------------------- llaves y manifiestos (Juliana)
+
+@app.command("keygen")
+def keygen(out: Path = typer.Option(..., help="archivo de la llave privada, p. ej. keys/alice.key"),
+           register: Optional[str] = typer.Option(None, help="user_id con el que se registra la llave pública"),
+           registry: Path = typer.Option(Path("keys/registry.json"), help="registro de llaves de usuario"),
+           force: bool = typer.Option(False, "--force", help="sobrescribir una llave que ya existe")):
+    """Genera una llave Ed25519 (permisos 600) y, con --register, la anota en el registro."""
+    from .identity import KeyPair, KeyRegistry
+    if out.exists() and not force:
+        raise typer.BadParameter(f"{out} ya existe; usa --force para reemplazarla")
+    kp = KeyPair.generate()
+    kp.save(out)
+    if register:
+        reg = KeyRegistry.load(registry)
+        reg.register(register, kp.public_str())
+        registry.parent.mkdir(parents=True, exist_ok=True)
+        reg.save(registry)
+        typer.echo(f"registrada como {register} en {registry}", err=True)
+    typer.echo(kp.public_str())
+
+
+def _load_tools(path: Path):
+    """tools.json: una lista de `{name, description, input_schema}` o `{"tools": [...]}` (el `tools/list` de MCP)."""
+    from .types import ToolDef
+    data = json.loads(path.read_text(encoding="utf-8"))
+    items = data.get("tools") if isinstance(data, dict) else data
+    if not isinstance(items, list) or not all(isinstance(t, dict) and t.get("name") for t in items):
+        raise typer.BadParameter(f"{path}: se esperaba una lista de herramientas con `name`")
+    return [ToolDef(t["name"], t.get("description") or "", t.get("input_schema") or t.get("inputSchema") or {})
+            for t in items]
+
+
+@manifest_app.command("sign")
+def manifest_sign(server: str = typer.Option(..., help="server_id, tal como lo nombra el agente (mcp__<server>__…)"),
+                  tools: Path = typer.Option(..., help="tools.json con las herramientas del servidor"),
+                  key: Path = typer.Option(..., help="llave privada del publicador"),
+                  out: Path = typer.Option(Path("manifests"), help="directorio de manifiestos de confianza"),
+                  publisher: Optional[str] = typer.Option(None, help="por defecto, el server_id"),
+                  version: str = typer.Option("1.0.0", help="server_version"),
+                  trust: bool = typer.Option(False, "--trust", help="agregar la llave a trust.json para ese publicador")):
+    """Firma el manifiesto de un servidor MCP y lo escribe en <out>/<server>.json."""
+    from .identity import KeyPair
+    from .manifests import TrustStore, manifest_hash, sign_manifest
+    kp = KeyPair.load(key)
+    pub = publisher or server
+    m = sign_manifest(kp, server, version, pub, _load_tools(tools))
+    out.mkdir(parents=True, exist_ok=True)
+    dest = out / f"{server}.json"
+    dest.write_text(json.dumps(m, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    typer.echo(f"{dest} · {len(m['body']['tools'])} herramientas · {manifest_hash(m)}", err=True)
+    if trust:
+        ts = TrustStore()
+        ts.load_dir(out)            # conserva publicadores y pins que ya había
+        ts.trust(pub, kp.public_str())
+        ts.save_trust(out)
+        typer.echo(f"{pub} confía en {kp.public_str()} ({out / 'trust.json'})", err=True)
+    typer.echo(manifest_hash(m))
+
+
+@manifest_app.command("check")
+def manifest_check(tools: Path = typer.Option(..., help="tools.json con lo que el servidor anuncia ahora"),
+                   server: str = typer.Option(..., help="server_id"),
+                   manifests: Path = typer.Option(Path("manifests"), help="directorio de manifiestos de confianza")):
+    """Evalúa las herramientas en vivo de un servidor contra el TrustStore, como lo haría el gateway."""
+    from .manifests import ManifestGate, TrustStore
+    ts = TrustStore()
+    ts.load_dir(manifests)
+    gate = ManifestGate(ts)
+    decisions = [gate.evaluate_tool(server, t, {}) for t in _load_tools(tools)]
+    for d in decisions:
+        typer.echo(f"{'ACEPTADA ' if d.accepted else 'RECHAZADA'} {d.origin}/{d.tool.name}: {d.reason}")
+    raise typer.Exit(0 if all(d.accepted for d in decisions) else 1)
+
+
+# ---------------------------------------------------------------- hooks y exec (Juliana)
+
+hook_app = typer.Typer(no_args_is_help=True, help="Hooks del agente: los invoca Claude Code, no el usuario (§7.6)")
+hooks_app = typer.Typer(no_args_is_help=True, help="Instalación de los hooks en un agente")
+app.add_typer(hook_app, name="hook")
+app.add_typer(hooks_app, name="hooks")
+
+
+def _run_hook(kind: str) -> None:
+    from .integrations.hooks import main as hook_main
+    raise typer.Exit(hook_main(kind))
+
+
+@hook_app.command("prompt")
+def hook_prompt_cmd():
+    """UserPromptSubmit: firma el prompt, lo envía al gateway y guarda el recibo."""
+    _run_hook("prompt")
+
+
+@hook_app.command("pre-tool")
+def hook_pre_tool_cmd():
+    """PreToolUse: consulta tool-check y deniega la herramienta si el gateway la rechazó."""
+    _run_hook("pre-tool")
+
+
+@hook_app.command("session-start")
+def hook_session_start_cmd():
+    """SessionStart: asocia la sesión del agente con la del gateway."""
+    _run_hook("session-start")
+
+
+@hooks_app.command("install")
+def hooks_install(agent: str = typer.Argument(..., help="claude-code (opencode y codex: roadmap)"),
+                  project: Path = typer.Option(Path("."), help="proyecto donde se instalan los hooks"),
+                  command: Optional[str] = typer.Option(None, help="comando owit que usarán los hooks"),
+                  yes: bool = typer.Option(False, "--yes", "-y", help="escribir sin preguntar"),
+                  dry_run: bool = typer.Option(False, "--dry-run", help="solo mostrar el diff")):
+    """Escribe los hooks en la configuración local del proyecto. Antes muestra el diff."""
+    if agent != "claude-code":
+        raise typer.BadParameter("por ahora solo claude-code; opencode y codex están en el roadmap")
+    import shutil
+    from .integrations import claude_code
+    owit = command or shutil.which("owit") or "owit"
+    try:
+        path, old, new = claude_code.plan_install(project, owit)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    if old == new:
+        typer.echo(f"{path}: los hooks ya están instalados")
+        return
+    typer.echo(claude_code.diff(path, old, new))
+    if dry_run:
+        return
+    if not yes and not typer.confirm(f"¿Escribir {path}?"):
+        raise typer.Exit(1)
+    claude_code.write(path, new)
+    typer.echo(f"hooks instalados en {path}; lanza el agente con `owit exec --user <usuario> -- claude`")
+
+
+@app.command("exec", context_settings={"allow_interspersed_args": False})
+def exec_cmd(cmd: list[str] = typer.Argument(..., help="comando del agente, después de `--`"),
+             user: str = typer.Option(..., help="user_id registrado en el gateway"),
+             key: Optional[Path] = typer.Option(None, help="llave privada del usuario (por defecto keys/<user>.key)"),
+             gateway: Optional[str] = typer.Option(None, help="URL del gateway (por defecto $OWIT_GATEWAY o localhost:8787)"),
+             upstream: Optional[str] = typer.Option(None, help="perfil del upstream para esta sesión"),
+             agent: Optional[str] = typer.Option(None, help="claude-code; si se omite, se deduce del comando"),
+             strict: bool = typer.Option(False, "--strict", help="rechazar los turnos sin prompt firmado"),
+             prompt: Optional[str] = typer.Option(None, help="firmar este prompt y pasarlo como argumento (agentes sin hooks)")):
+    """Crea una sesión en el gateway y lanza el agente a través de ella: `owit exec --user alice -- claude`."""
+    from .integrations.exec import DEFAULT_GATEWAY, ExecError, run_exec
+    try:
+        code = run_exec(cmd, user, key or Path("keys") / f"{user}.key",
+                        gateway or os.environ.get("OWIT_GATEWAY") or DEFAULT_GATEWAY,
+                        agent=agent, upstream=upstream, strict=strict, prompt=prompt)
+    except ExecError as e:
+        typer.echo(f"owit exec: {e}", err=True)
+        raise typer.Exit(2)
+    raise typer.Exit(code)
 
 
 def main() -> None:

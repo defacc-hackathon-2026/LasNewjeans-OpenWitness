@@ -1,0 +1,230 @@
+{
+ "class": "bad_sig",
+ "expect": {
+  "http_fetch/fetch": "ok",
+  "mail/list_inbox": "bad_sig",
+  "mail/send_email": "bad_sig"
+ },
+ "id": "bad_sig_02",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "http_fetch-pub",
+    "server_id": "http_fetch",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Descarga una URL del servidor local de fixtures.",
+      "input_schema": {
+       "properties": {
+        "url": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "url"
+       ],
+       "type": "object"
+      },
+      "name": "fetch",
+      "tool_hash": "sha256:9645a8e2e505a54eb782f3dc9c2995e7754d9221809b585595f5b7a9deec0a5b"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY=",
+   "sig": "xzv/3e5Qcvw1VIm/jOoWmhQFB+ZvzwxFNeZPudzKHaHt2/MCutgunPvvgm37mGTTOL0gsKskXSIDp9A1gTIIDg=="
+  },
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "mail-pub",
+    "server_id": "mail",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Envía un correo (simulado: solo lo registra).",
+      "input_schema": {
+       "properties": {
+        "body": {
+         "type": "string"
+        },
+        "to": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "body",
+        "to"
+       ],
+       "type": "object"
+      },
+      "name": "send_email",
+      "tool_hash": "sha256:8424d6a6ce863d9fbee4030d1644e0ae3dd22d4a9ce13184befa63e745cc7449"
+     },
+     {
+      "description": "Lista los correos recibidos.",
+      "input_schema": {
+       "properties": {},
+       "required": [],
+       "type": "object"
+      },
+      "name": "list_inbox",
+      "tool_hash": "sha256:3a150b83ed66baeb8d6c77b56ed9da06c5723280866953d15ad5281ac817c765"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:G+RenMP2duCjmkRLcLXSCXGoYPAdv6iBBVo8jgdj1hM=",
+   "sig": "r/x07Jbkoklhq1A+Zo4cn2pbLlaKO5zDCTXiUBJTLBol3Hq4Vy/H1TpBZaZ70zN9WXqLPZUozPhatF9IAAAAAAA="
+  }
+ ],
+ "note": "firma corrupta",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "http_fetch-pub",
+     "server_id": "http_fetch",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Descarga una URL del servidor local de fixtures.",
+       "input_schema": {
+        "properties": {
+         "url": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "url"
+        ],
+        "type": "object"
+       },
+       "name": "fetch",
+       "tool_hash": "sha256:9645a8e2e505a54eb782f3dc9c2995e7754d9221809b585595f5b7a9deec0a5b"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY=",
+    "sig": "xzv/3e5Qcvw1VIm/jOoWmhQFB+ZvzwxFNeZPudzKHaHt2/MCutgunPvvgm37mGTTOL0gsKskXSIDp9A1gTIIDg=="
+   },
+   "server_id": "http_fetch",
+   "tools": [
+    {
+     "description": "Descarga una URL del servidor local de fixtures.",
+     "input_schema": {
+      "properties": {
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "url"
+      ],
+      "type": "object"
+     },
+     "name": "fetch"
+    }
+   ]
+  },
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "mail-pub",
+     "server_id": "mail",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Envía un correo (simulado: solo lo registra).",
+       "input_schema": {
+        "properties": {
+         "body": {
+          "type": "string"
+         },
+         "to": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "body",
+         "to"
+        ],
+        "type": "object"
+       },
+       "name": "send_email",
+       "tool_hash": "sha256:8424d6a6ce863d9fbee4030d1644e0ae3dd22d4a9ce13184befa63e745cc7449"
+      },
+      {
+       "description": "Lista los correos recibidos.",
+       "input_schema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+       },
+       "name": "list_inbox",
+       "tool_hash": "sha256:3a150b83ed66baeb8d6c77b56ed9da06c5723280866953d15ad5281ac817c765"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:G+RenMP2duCjmkRLcLXSCXGoYPAdv6iBBVo8jgdj1hM=",
+    "sig": "r/x07Jbkoklhq1A+Zo4cn2pbLlaKO5zDCTXiUBJTLBol3Hq4Vy/H1TpBZaZ70zN9WXqLPZUozPhatF9IAAAAAAA="
+   },
+   "server_id": "mail",
+   "tools": [
+    {
+     "description": "Envía un correo (simulado: solo lo registra).",
+     "input_schema": {
+      "properties": {
+       "body": {
+        "type": "string"
+       },
+       "to": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "body",
+       "to"
+      ],
+      "type": "object"
+     },
+     "name": "send_email"
+    },
+    {
+     "description": "Lista los correos recibidos.",
+     "input_schema": {
+      "properties": {},
+      "required": [],
+      "type": "object"
+     },
+     "name": "list_inbox"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "mail/send_email",
+  "mail/list_inbox"
+ ],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "http_fetch-pub": [
+    "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY="
+   ],
+   "mail-pub": [
+    "ed25519:G+RenMP2duCjmkRLcLXSCXGoYPAdv6iBBVo8jgdj1hM="
+   ],
+   "otro-pub": [
+    "ed25519:G+RenMP2duCjmkRLcLXSCXGoYPAdv6iBBVo8jgdj1hM="
+   ]
+  }
+ }
+}

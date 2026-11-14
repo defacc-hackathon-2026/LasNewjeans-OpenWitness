@@ -6,7 +6,7 @@
 
 ## Estado (14 de noviembre)
 
-Todo está en `main`. `uv run pytest -q` queda en verde.
+Las ramas de Juliana (`juliana/manifests`, que incluye `juliana/identity-tests`) y de Andres (`andres/attribution`) están integradas en `claude/great-wright-vtjd8d`, listas para pasar a `main`. `uv run pytest -q`: 184 en verde.
 
 | Módulo | SPEC | Estado |
 |---|---|---|
@@ -21,11 +21,12 @@ Todo está en `main`. `uv run pytest -q` queda en verde.
 | Fixture de Claude Code 2.1.323 (con y sin búsqueda diferida) | §5.3, §12.2 | ✅ `tests/fixtures/claude_code/2.1.323/` |
 | Pendiente de §5.3: ¿el token de sesión gana sobre el login de suscripción? | §5.3 | ✅ sí, con la configuración real (`bench/claude_code_probe.py --real-config`) |
 | Bench §9.1 (12 mutaciones) | §9.1 | ✅ 364/364 dentro del modelo; cola no anclada 0/4 sin recibo (L3) y 2/2 con recibo |
-| Bench §9.4 (latencia) | §9.4 | ✅ +1,0 ms (refagent) y +2,2 ms (petición de Claude Code de 75 KB) hasta el primer byte (p50); `append()` ≈ 0,3–0,4 ms; hook ≈ 92 ms (aproximado, hasta que exista `owit hook`) |
+| Bench §9.4 (latencia) | §9.4 | ✅ +1,0 ms (refagent) y +2,2 ms (petición de Claude Code de 75 KB) hasta el primer byte (p50) en el portátil (`results/latency_laptop.json`); en el contenedor de 4 vCPU, +2,1 / +5,3 ms, igual que antes de integrar. Hook real `owit hook pre-tool` ≈ 84 ms (era ≈ 195 ms pasando por Typer: `openwitness.entry` lo evita) |
 | Upstream `anthropic_compat` con LM Studio (`gpt-oss-20b`) | §7.7 | ✅ `bench/local_model.py`: 10/10 bitácoras íntegras, 0 `history_mismatch`; el modelo cae 5/5 en la inyección sutil |
 | Claude Code → gateway → LM Studio | §9.5 | ✅ `bench/claude_code_probe.py --lmstudio http://localhost:1234`: lee `NOTAS.md` con `Read`, contesta bien e integridad OK |
-| Demo de integridad (§13.1) | §13.1 | ✅ `uv run python -m bench.demo && bash demo/demo.sh` (`FULL=1` agrega la reescritura con la llave del gateway). Falta el paso de atribución (Andres) y grabarla |
-| Ficha: "Método" y "Resultados" | §13.3 | ✅ borrador en `docs/ficha/metodo.md` y `docs/ficha/resultados.md`; faltan las filas de §9.2 (Andres) y §9.3 (Juliana) |
+| Demo (§13.1) | §13.1 | ✅ `uv run python -m bench.demo && bash demo/demo.sh`: atribución de alice (`TOOL_INJECTED(mcp:issues)`, parcial) y de mallory (`USER_INSTRUCTED`, no repudio) → verify OK → borrado → verify FALLA → atribución `UNVERIFIABLE` (`FULL=1` agrega la reescritura con la llave del gateway). Grabada en `docs/demo.cast` con `bench.record_demo` |
+| Ficha: "Método" y "Resultados" | §13.3 | ✅ con las filas de §9.2, §9.3 y G9; `docs/ficha_tecnica.pdf` (2 páginas, 633 KB) con `uv run python docs/ficha_pdf.py` |
+| Integración de las ramas y G9 | §11, §2 | ✅ `ManifestGate` en el gateway; `bench.claude_code_hooks_probe` con Claude Code 2.1.325: prompt firmado por el hook, herramienta alterada quitada y denegada |
 
 Cómo reproducir:
 
@@ -37,12 +38,14 @@ uv run python -m bench.latency --n 1000 --out results
 uv run python -m bench.claude_code_probe            # Claude Code real → gateway → fake
 uv run python -m bench.local_model --runs 5         # agente → gateway → LM Studio (gpt-oss-20b)
 uv run python -m bench.claude_code_probe --lmstudio http://localhost:1234
-uv run python -m bench.demo && bash demo/demo.sh    # demo de integridad (§13.1)
+uv run python -m bench.demo && bash demo/demo.sh    # demo (§13.1)
+uv run python -m bench.record_demo --full           # grabación en docs/demo.cast
+uv run python docs/ficha_pdf.py                     # ficha técnica en PDF (2 páginas)
 ```
 
 ## Lo que entregas a los demás
 
-- ✅ Repo, `pyproject.toml` y `types.py` (en `main`).
+- ✅ Repo, `pyproject.toml` y `types.py` (en `main`). El comando `owit` entra por `openwitness.entry:main`.
 - ✅ Fixture de Claude Code en `tests/fixtures/claude_code/2.1.323/`.
 - ✅ Gateway que reenvía sesiones completas: con `fake` (`tests/test_gateway.py`) y con Claude Code real (`bench/claude_code_probe.py`). **El punto de decisión de G9 se cumple:** se sigue con Claude Code.
 - ✅ Versiones provisionales de `canonical.py`, `identity/`, `tool_filter.py` y `llm/config.py`, para que nadie quede bloqueado (regla en SPEC §11).
@@ -57,19 +60,15 @@ uv run python -m bench.demo && bash demo/demo.sh    # demo de integridad (§13.1
 
 ## Lo que falta (en orden)
 
+- [x] Integrar el `ManifestGate` de Juliana (§9.3 por el gateway: 47/47, `tool-check` deniega 47/47).
+- [x] G9 con Juliana: Claude Code real con los hooks (`bench/claude_code_hooks_probe.py`).
+- [x] Paso de atribución en `demo/demo.sh` y grabación (`docs/demo.cast`).
+- [x] Bench §9.4 con `owit hook pre-tool` real.
+- [x] Volver a correr los benchmarks sobre la rama integrada y actualizar `docs/ficha/resultados.md`.
 - [ ] **Revisión de `types.py` y de §6.4 con el equipo** (`segments`, motivos nuevos de `user_text_unsigned`, `manifest_hash` en `manifest_decision`).
-- [ ] Integrar el `ManifestGate` de Juliana en cuanto llegue:
-  - correr `tests/` y `bench.claude_code_probe` con un servidor MCP alterado;
-  - comprobar que se quita de `tools` y que `tool-check` lo deniega.
-- [ ] **G9 con Juliana:** Claude Code real con los hooks.
-  - Ampliar `bench/claude_code_probe.py` para instalar los hooks en el `CLAUDE_CONFIG_DIR` temporal y usar los servidores MCP de demo de Andres.
-  - Meta: 0 textos sin emparejar con el prompt firmado.
-- [ ] Agregar a `demo/demo.sh` el paso de atribución con `owit attribute`, cuando Andres lo tenga:
-  - inyección sutil → `TOOL_INJECTED(mcp:issues)` parcial;
-  - Mallory → `USER_INSTRUCTED`, con no repudio.
-- [ ] Grabar la demo: `brew install asciinema`, `asciinema rec docs/demo.cast -c "PAUSE=2 FULL=1 bash demo/demo.sh"`.
-- [ ] Bench §9.4: volver a medir el hook con `owit hook pre-tool` real (lo detecta solo si existe `openwitness.integrations.hooks`).
-- [ ] **15:00:** volver a correr todos los benchmarks sobre `main` y congelar `results/` y la tabla de `docs/ficha/resultados.md`.
+- [ ] Pasar `claude/great-wright-vtjd8d` a `main` (PR) y congelar el repo.
+- [ ] Si se quiere la demo en el portátil: `brew install asciinema` y `asciinema play docs/demo.cast`, o regrabar con `asciinema rec`.
+- [ ] Volver a correr `bench.run_bench --upstream lmstudio` y `bench.local_model` solo si cambia el código de atribución o del gateway (aquí no hay LM Studio).
 - [ ] *(si sobra)* Rekor real (G11).
 
 ## Listo cuando

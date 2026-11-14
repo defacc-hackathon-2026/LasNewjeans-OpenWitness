@@ -16,18 +16,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from ..canonical import CanonicalError, hash_obj, sha256_tagged
-from ..ledger.blobs import encode_payload
+from ..manifests.signer import tool_hash   # una sola implementación de `tool_hash` (§6.3), con y sin floats
 from ..types import GateDecision, ToolDef
 from .protocols.anthropic_messages import AnthropicMessagesAdapter
-
-
-def tool_hash(t: ToolDef) -> str:
-    """`tool_hash` de §6.3. Si el esquema trae floats (p. ej. `minimum: 0.5`) se usa el hash de los bytes."""
-    try:
-        return hash_obj(t.descriptor())
-    except CanonicalError:
-        return sha256_tagged(encode_payload(t.descriptor()))
 
 
 class Gate(Protocol):
