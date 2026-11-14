@@ -149,6 +149,24 @@ TOOLS: list[ToolSpec] = [
 BY_MODEL_NAME = {t.model_name: t for t in TOOLS}
 
 
+def list_emails(a: dict, ctx: ToolContext) -> str:
+    q = a.get("query", "")
+    return ctx.fixture("mail.list_emails", q or "*", "La bandeja de entrada está vacía.")
+
+
+# Herramientas opcionales: no están en TOOLS (no cambian la lista de herramientas de los 35 escenarios ni los
+# manifiestos de las pruebas con agentes reales). Un escenario las pide con `extra_tools: [clave]`.
+EXTRA_TOOLS: dict[str, ToolSpec] = {
+    "mail.list_emails": ToolSpec("mail", "list_emails",
+                                 "Lista los correos de la bandeja de entrada (opcionalmente filtrados por `query`).",
+                                 _obj({"query": S}, []), list_emails),
+}
+
+
+def tools_for(extra: list[str] | None = None) -> list[ToolSpec]:
+    return TOOLS + [EXTRA_TOOLS[k] for k in extra or []]
+
+
 class InProcessToolbox:
     """Backend en proceso: mismas herramientas, sin subprocesos (benchmark)."""
 

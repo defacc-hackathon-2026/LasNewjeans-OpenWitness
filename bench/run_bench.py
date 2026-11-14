@@ -31,6 +31,7 @@ from openwitness.ledger import load_records, verify_ledger
 from openwitness.llm.config import load_profiles, make_client
 from openwitness.llm.naive import NaiveResponder
 from openwitness.refagent import InProcessToolbox, RefAgent
+from openwitness.refagent.tools import tools_for
 from openwitness.refagent.agent import in_process
 
 from .synthetic import make_env
@@ -38,12 +39,12 @@ from .synthetic import make_env
 SCEN_DIR = Path(__file__).parent / "scenarios"
 LABELS = ["USER_INSTRUCTED", "TOOL_INJECTED", "AMBIGUOUS", "MODEL_INITIATIVE", "UNVERIFIABLE"]
 CLASSES = ["malicious_signed", "malicious_unsigned", "mcp_injection", "builtin_injection", "subtle_injection",
-           "mixed", "benign"]
+           "mixed", "benign", "llmail"]
 
 
-def load_scenarios(only: str | None = None) -> list[dict]:
+def load_scenarios(only: str | None = None, scen_dir: Path | str | None = None) -> list[dict]:
     out = []
-    for p in sorted(SCEN_DIR.glob("*.yaml")):
+    for p in sorted(Path(scen_dir or SCEN_DIR).glob("*.yaml")):
         s = yaml.safe_load(p.read_text(encoding="utf-8"))
         if isinstance(s.get("fake_script"), str):
             s["fake_script"] = (yaml.safe_load(Path(s["fake_script"]).read_text(encoding="utf-8")) or {}).get("steps")
@@ -70,8 +71,8 @@ def find_action(recs, blobs, expected: dict):
         if r.kind != "tool_call" or r.meta.get("tool") != expected["tool"]:
             continue
         p = blobs.get_obj(r.payload_hash) or {}
-        blob = json.dumps(p.get("args") or {}, ensure_ascii=False)
-        if all(c in blob for c in expected.get("args_contains") or []):
+        blob = json.dumps(p.get("args") or {}, ensure_ascii=False).lower()   # correos y hosts: sin mayúsculas
+        if all(c.lower() in blob for c in expected.get("args_contains") or []):
             return r
     return None
 
@@ -81,7 +82,7 @@ async def run_one(s: dict, upstream=None, model: str = "fake-model", judge=None,
     root = Path(tempfile.mkdtemp(prefix=f"owit-bench-{s['id']}-"))
     env = make_env(root, anchor_every=20, upstream=upstream,
                    responder=None if upstream else NaiveResponder(s["fake_script"]))
-    tools = InProcessToolbox(s.get("tool_fixtures") or {})
+    tools = InProcessToolbox(s.get("tool_fixtures") or {}, tools=tools_for(s.get("extra_tools")))
     _, sdk_http = in_process(env.gateway.app())
     agent = RefAgent("http://gw", tools, user=s["user"], key=env.users[s["user"]], http=env.client, model=model,
                      temperature=temperature, sdk_http=sdk_http)
@@ -196,7 +197,7 @@ async def main_async(a) -> dict:
         model = prof.model
     judge = make_client(profiles[a.judge]) if a.judge else None
     modes = ("rules", "rules-no-r2b") + (("judge", "rules+judge") if judge else ())
-    scen = load_scenarios(a.only)
+    scen = load_scenarios(a.only, a.scenarios)
     results = []
     for k in range(a.runs):
         for s in scen:
@@ -204,7 +205,7 @@ async def main_async(a) -> dict:
             r["run"] = k
             results.append(r)
             v = r["verdicts"].get("rules", {})
-            print(f"{s['id']:22s} ocurrió={r['occurred']!s:5s} integ={r['integrity_ok']!s:5s} "
+            print(f"{s['id']:26s} ocurrió={r['occurred']!s:5s} integ={r['integrity_ok']!s:5s} "
                   f"{v.get('label', '-'):16s} {str(v.get('source', '-')):40s} {r['seconds']:6.1f}s"
                   + (f"  ERROR {r['error'][:80]}" if r["error"] else ""), flush=True)
     report = {"upstream": a.upstream, "model": model, "judge": a.judge, "runs": a.runs, "n": len(results),
@@ -220,6 +221,8 @@ def main(argv: list[str] | None = None) -> dict:
     ap.add_argument("--judge", default=None, help="perfil del juez (G10); activa los modos judge y rules+judge")
     ap.add_argument("--config", default="owit.toml")
     ap.add_argument("--only", default=None, help="una clase o un id de escenario")
+    ap.add_argument("--scenarios", default=None, help="carpeta de escenarios (por defecto bench/scenarios; "
+                                                      "p. ej. bench/scenarios_llmail)")
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--temperature", type=float, default=None)
     ap.add_argument("--out", default="results")

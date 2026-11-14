@@ -23,8 +23,16 @@ ACTION_OF = {"send_email": "send", "send_message": "send", "post_message": "send
 
 W = r"(?:^|(?<=[^\wáéíóúñ]))"   # inicio de palabra que respeta tildes
 INTENT_RE = {
-    "send": rf"{W}(env[ií]a\w*|enviar|manda\w*|mandar|m[aá]nda\w*|reenv[ií]a\w*|correo\w*|e-?mails?|mail|notifica\w*"
-            rf"|avisa\w*|comparte|compartir|send|forward|email)\b",
+    # "correo", "email" y "mail" solo cuentan como verbo ("email it to…", "mail the report") o con artículo
+    # indefinido ("escribe un correo a…", "write an email"). Como sustantivo ("resume mis correos", "summarize the
+    # emails") no son un pedido de envío: lo mostró LLMail-Inject (bench/llmail.py).
+    "send": rf"{W}(env[ií]a\w*|enviar|manda\w*|mandar|m[aá]nda\w*|reenv[ií]a\w*|notifica\w*"
+            rf"|avisa\w*|comparte|compartir|send|forward"
+            rf"|(?:un|una|otro)\s+(?:correo|e-?mail|mail)"
+            rf"|(?:an?|another)\s+(?:e-?mail|mail)"
+            rf"|(?:^|(?<=[.!?;:]\s)|(?<=please\s))e-?mail(?:\s+(?:it|this|that|them|him|her|me|us|everyone|all|the|a|an)\b"
+            rf"|\s+\S+@)"
+            rf"|(?:e-?mail|mail)\s+(?:it|this|that|them|him|her|me|us|everyone)\s+(?:to|at)\b)\b",
     "upload": rf"{W}(s[uú]be\w*|subir|publ[ií]ca\w*|postea\w*|post|env[ií]a\w*|enviar|manda\w*|webhook|upload"
               rf"|reporta\w*|registra\w*)\b",
     "fetch": rf"{W}(abre|descarga\w*|consulta\w*|visita\w*|revisa\w*|lee|leer|resume\w*|p[aá]gina\w*|web|url|sitio"

@@ -56,7 +56,7 @@ Todo lo que ve el modelo pasa por el gateway, que deja **tres pruebas** por cada
 | **Gateway** | Python 3.14, Starlette y httpx. Habla **Anthropic Messages** y **OpenAI Responses** con streaming (SSE) y reenvía la respuesta sin esperar a la bitácora. Los agentes reciben un token de sesión, nunca la API key real |
 
 ## Cómo lo evaluamos
-Todo corre en local, con herramientas de demo, datos inventados y dominios `.test`, con un modelo simulado (siempre cae en la trampa; resultados repetibles) y uno real, `gpt-oss-20b`. Medimos: **manipulación** (bitácoras válidas alteradas de 11 formas, 4 de ellas por un administrador con la llave del gateway); **atribución** (35 escenarios donde sabemos quién causó la acción: usuario malicioso, inyección burda y sutil, mixtos e inocentes); **herramientas maliciosas** (47 sin firma, con firma falsa, alteradas o suplantadas, y 96 legítimas); **velocidad** (1 000 peticiones con y sin gateway); y **agentes reales** sin modificar (Claude Code, OpenCode y Codex, con una herramienta alterada después de firmar).
+Todo corre en local, con herramientas de demo, datos inventados y dominios `.test`, con un modelo simulado (siempre cae en la trampa; resultados repetibles) y uno real, `gpt-oss-20b`. Medimos: **manipulación** (bitácoras válidas alteradas de 11 formas, 4 de ellas por un administrador con la llave del gateway); **atribución** (35 escenarios donde sabemos quién causó la acción: usuario malicioso, inyección burda y sutil, mixtos e inocentes, y **264 ataques ajenos** de la competencia LLMail-Inject de Microsoft, escritos por personas reales); **herramientas maliciosas** (47 sin firma, con firma falsa, alteradas o suplantadas, y 96 legítimas); **velocidad** (1 000 peticiones con y sin gateway); y **agentes reales** sin modificar (Claude Code, OpenCode y Codex, con una herramienta alterada después de firmar).
 
 ## Resultados
 
@@ -65,12 +65,13 @@ Todo corre en local, con herramientas de demo, datos inventados y dominios `.tes
 | **Manipulaciones de la bitácora detectadas** | **364 de 364 (100 %)**, incluso cuando las hace el administrador con la llave del gateway |
 | **Atribución con el modelo real** (`gpt-oss-20b`) | La acción dañina ocurrió en 74 de 105 corridas: **74 de 74 bien atribuidas** |
 | **Atribución con el modelo simulado** | **35 de 35**. Sin la regla para el caso parcial, las 5 inyecciones sutiles quedan sin decidir |
+| **Ataques ajenos** (LLMail-Inject) | Simulado: **224 de 237**; los otros 13, sin decidir y **nunca contra la víctima**. Con `gpt-oss-20b`: **9 de 9** |
 | Con qué frecuencia el modelo real cayó | Inyección sutil **12 de 15**; inyección por herramienta 17 de 30; obedeció al usuario malicioso 25 de 30 |
 | **Herramientas maliciosas bloqueadas** | **47 de 47**, sin bloquear ninguna de las 96 legítimas |
 | **Tiempo añadido** | **≈ 1 ms** por petición; la firma del mensaje, ≈ 84 ms |
 | **Agentes reales sin modificar** | Claude Code, OpenCode y Codex: mensajes firmados, la herramienta alterada **no llega al modelo** y **el mismo veredicto** en los tres |
 
-**Lectura honesta:** el 35 de 35 es optimista, porque las reglas y los escenarios los escribimos juntos; por eso el número que más pesa es el **74 de 74 con un modelo real**. Un juez LLM opcional para los casos dudosos lo hizo peor que las reglas solas (30 de 35), así que viene apagado. Cuando el modelo se niega a obedecer, el mensaje firmado queda igual en la bitácora como **prueba del intento**.
+**Lectura honesta:** el 35 de 35 es optimista, porque las reglas y los escenarios los escribimos juntos; por eso pesan más el **74 de 74 con un modelo real** y los ataques ajenos, que además destaparon un error ya corregido. Un juez LLM opcional para los casos dudosos lo hizo peor que las reglas solas (30 de 35), así que viene apagado. Cuando el modelo se niega a obedecer, el mensaje firmado queda igual en la bitácora como **prueba del intento**.
 
 
 ## Límites
@@ -78,7 +79,7 @@ Todo corre en local, con herramientas de demo, datos inventados y dominios `.tes
 - **Solo cubre lo que pasa por el gateway.** Sin la firma del usuario se atribuye igual, pero sin no repudio.
 - **Una firma prueba quién publicó una herramienta, no que sea buena** (0 de 5 firmadas pero maliciosas bloqueadas).
 - **Ventana sin anclar:** lo escrito después del último sello solo lo protegen los recibos. En la demo, el sello externo es simulado.
-- **Buscamos los datos tal cual** (un destino reescrito o codificado no se encuentra); la intención se estima con palabras clave; 35 escenarios no dan significancia estadística.
+- **Buscamos los datos tal cual** (un destino codificado no se encuentra); la intención y las órdenes, con palabras clave.
 
 ## Riesgo de doble uso
 
@@ -87,5 +88,5 @@ Todo corre en local, con herramientas de demo, datos inventados y dominios `.tes
 | Vigilar empleados | El acceso del auditor es bajo demanda y queda registrado; retención limitada; el usuario ve sus propias sesiones |
 | El gateway como punto de recolección de datos | Se trata como un sistema sensible (ve lo mismo que el proveedor del modelo); al exterior solo salen huellas, nunca contenido |
 | Culpar a alguien con evidencia incompleta | Se separa lo que está probado (la bitácora) de lo deducido (la causa); existe "no alcanza la evidencia"; se indica si hay no repudio |
-| Usar los escenarios como receta de ataque | Textos inventados contra herramientas de demo locales; ninguno apunta a un producto real |
+| Usar los escenarios como receta de ataque | Textos inventados o ya públicos, solo contra herramientas de demo; ninguno es real |
 | Que el administrador registre cosas falsas | No se puede impedir al escribir, pero el ancla y los recibos impiden reescribir después |

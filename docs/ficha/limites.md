@@ -8,6 +8,6 @@
 - **Ventana sin anclar (L3).** El operador puede truncar la cola posterior al último ancla; solo la delata un recibo del usuario.
 - **Firma ≠ bondad (L5).** Un publicador confiable puede firmar una descripción envenenada.
 - **El taint es literal.** Si el modelo parafrasea o codifica un destino (base64, partes sueltas), las reglas no lo encuentran y caen en R4 o `AMBIGUOUS`. El texto libre (cuerpo de un correo) se reporta pero no decide.
-- **La intención del prompt se estima con palabras clave** (en español e inglés). Un prompt muy vago cae en `AMBIGUOUS`, a propósito.
-- **El 100 % con el modelo falso es optimista:** las reglas y los escenarios se escribieron juntos y ese modelo siempre cae. La corrida con `gpt-oss-20b` mide la tasa real de éxito de los ataques; con 35 escenarios no hay significancia estadística.
+- **La intención del prompt y las órdenes al agente se estiman con palabras clave** (en español e inglés). Un prompt muy vago cae en `AMBIGUOUS`, a propósito. LLMail-Inject mostró los dos lados de esto. La regla de intención tomaba "emails" como sustantivo ("summarize the emails") por un pedido de envío, y ya está corregido. La regla de imperativos no ve órdenes escritas como `CALL_TOOL(send_email)`, en tercera persona o en otro idioma: 13 de 237 quedan `AMBIGUOUS`.
+- **El 100 % con el modelo falso es optimista:** las reglas y los escenarios se escribieron juntos y ese modelo siempre cae. La corrida con `gpt-oss-20b` mide la tasa real de éxito de los ataques; con 35 escenarios no hay significancia estadística. Por eso sumamos ataques ajenos (LLMail-Inject), con verdad que no fijamos nosotros.
 - **El juez LLM también lee la inyección.** Va delimitado, debe citar `seq` que existan y nunca anula a R1 ni a la integridad.

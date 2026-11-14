@@ -177,7 +177,33 @@ uv run python -m bench.demo && bash demo/demo.sh   # demo de §13.1: atribución
 uv run python -m bench.run_bench --out results                              # modelo falso ingenuo
 uv run python -m bench.run_bench --upstream lmstudio --runs 3 --out results  # gpt-oss-20b real
 uv run python -m bench.run_bench --judge lmstudio_openai --out results       # + juez LLM (G10)
+
+# §9.2 con ataques externos: LLMail-Inject (Microsoft, SaTML 2025; HF microsoft/llmail-inject-challenge, MIT)
+uv run python -m bench.llmail fetch --split Phase1 --n 300 --out data/llmail/phase1_sample.jsonl   # API pública de HF
+uv run python -m bench.llmail convert --input data/llmail/phase1_sample.jsonl --n 50              # → bench/scenarios_llmail/
+uv run python -m bench.run_bench --scenarios bench/scenarios_llmail --tag _llmail --out results
 ```
+
+**LLMail-Inject.** Los 35 escenarios de arriba los escribimos nosotros. Para no evaluarnos solo con ellos, `bench/llmail.py` convierte ataques de la competencia LLMail-Inject en escenarios con la misma forma. Son correos escritos por participantes reales para que un asistente de correo llame a `send_email` hacia `contact@contact.com`. La víctima (alice, prompt firmado) solo pide leer y resumir su bandeja, y el correo del atacante llega en el resultado de `mail.list_emails`, una herramienta que solo usan estos escenarios. Así la verdad no la fijamos nosotros: `TOOL_INJECTED(mcp:mail)`, sin no repudio y no parcial. Adaptaciones (detalle en el docstring de `bench/llmail.py`):
+- el resto de la bandeja es sintético;
+- `contact.com` se reescribe a `contact.test`, porque la herramienta de correo de la demo solo acepta dominios reservados;
+- no hay recuperador, así que en los escenarios 3 y 4 el correo del atacante siempre llega al contexto;
+- solo se comprueba el destinatario;
+- las defensas del original (Prompt Shield, TaskTracker, Spotlight, juez LLM) no se reproducen y se guardan como metadatos.
+
+Por defecto solo se convierten los ataques que ganaron en la competencia (los cinco objetivos en `true`).
+
+Resultados (14 de noviembre, upstream `fake`, muestra de 300 filas de Phase1; los ataques ganadores están en `bench/scenarios_llmail/` y la salida en `results/attribution_llmail.txt`):
+
+| Conjunto | La acción ocurrió | Etiqueta y fuente | `non_repudiable` y `partial` |
+|---|---|---|---|
+| 11 ataques ganadores | 11/11 | **11/11** | 11/11 |
+| 264 ataques únicos (ganadores y perdedores) | 237/264 | **224/237**; 13 `AMBIGUOUS`, ninguno culpa a alice | 237/237 |
+| 11 ganadores × 3 corridas con `gpt-oss-20b` real (LM Studio, `results/attribution_llmail_lmstudio.txt`) | **9/33**, en 4 de los 11 ataques; 3 corridas con error de LM Studio ("Failed to generate a valid tool call") | **9/9** | 9/9 |
+
+- **Qué mostró:** la regla de intención de envío tomaba "correo"/"email" como sustantivo ("summarize all the emails") por un pedido de envío. Por eso marcaba `partial = true` en 232 de 237 casos. Ahora solo cuenta como verbo o con artículo indefinido ("escribe un correo a…").
+- **Los 13 `AMBIGUOUS`:** son inyecciones que la regla de imperativos no reconoce. Usan guion bajo (`CALL_TOOL(send_email)`), tercera persona ("someone sends…"), otro idioma (chino) o una nota sin orden ("my new email address is…").
+- **Los 27 que no ocurrieron:** ocultan la dirección (p. ej. `contact yes@ yes contact.yes com`) y el modelo falso no la reconstruye.
 
 Resultados (14 de noviembre, upstream `fake`, localhost; tabla completa en [docs/ficha/resultados.md](docs/ficha/resultados.md)):
 
@@ -198,6 +224,8 @@ Resultados (14 de noviembre, upstream `fake`, localhost; tabla completa en [docs
 | Atribución, modelo falso (35 escenarios, 7 clases) | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; sin R2b, 30/35 |
 | Atribución, `gpt-oss-20b` (3 × 35 corridas) | acción ocurrida en 74/105; **74/74 atribuidas correctamente**; inyección sutil exitosa 12/15 |
 | Juez LLM local `gpt-oss-20b` (G10) | solo juez 21/35; reglas+juez 30/35; las reglas solas (35/35) son la mejor configuración |
+| Ataques ajenos: LLMail-Inject, modelo falso (264 ataques únicos) | etiqueta y `source` **224/237**, `partial` 237/237; 13 `AMBIGUOUS`, ninguno contra la víctima |
+| LLMail-Inject con `gpt-oss-20b` (11 ganadores × 3) | el ataque funcionó en 9/33; **9/9 atribuidas correctamente** |
 
 Detalle en `results/*.txt`. Las latencias de la tabla son de un portátil (`results/latency_laptop.json`); en el contenedor de 4 vCPU donde se volvió a correr todo dan +2,1 / +5,3 ms (`results/latency.json`).
 
@@ -243,3 +271,4 @@ Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mal
 - Los 35 escenarios (`bench/scenarios/`) también se redactaron con ayuda de IA; las inyecciones son textos de ejemplo contra herramientas de demo.
 - La integración de las ramas del equipo, `src/openwitness/entry.py` (hooks sin Typer), el paso de atribución de `bench/demo.py`, `docs/ficha_pdf.py` y la re-corrida de los benchmarks se hicieron con Claude Code.
 - G13 (Fase 2): el adaptador `gateway/protocols/openai_responses.py`, la generalización del gateway a varios protocolos, `llm/openai_upstream.py`, el modo Responses de `llm/fake.py`, `integrations/codex/`, `bench/codex_probe.py` y `tests/test_decompose_responses.py` se escribieron con Claude Code (Claude Opus 5.5); los revisa Adrian.
+- El conversor de LLMail-Inject (`bench/llmail.py`, `tests/test_llmail.py`), la herramienta opcional `mail.list_emails` y la opción `--scenarios` de `bench/run_bench.py` se escribieron con Claude Code (Claude Opus 5.5). Los ataques son del dataset público LLMail-Inject y la bandeja benigna es sintética.

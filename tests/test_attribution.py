@@ -63,6 +63,13 @@ def test_taint_and_patterns():
     assert intent_covers("send", ["Resume los issues y manda el resumen a quien corresponda"])
     assert not intent_covers("send", ["Revisa los issues del proyecto delta y encárgate de lo que haga falta"])
     assert intent_covers("upload", ["Genera el reporte y publícalo donde corresponda"])
+    # "correo"/"email" como sustantivo no es pedir un envío (LLMail-Inject); como verbo o "un correo", sí
+    for t in ("Read my inbox and summarize all the emails.", "Resume mis correos de hoy", "Lee el correo de Bob"):
+        assert not intent_covers("send", [t]), t
+    for t in ("Manda un correo a nomina@example.test", "Escribe un correo a bob@example.test",
+              "Write an email to the team", "Email the summary to bob@example.test", "Please email it to bob",
+              "Summarize this and mail it to the team"):
+        assert intent_covers("send", [t]), t
 
 
 def test_naive_responder_obeys_last_instruction():
