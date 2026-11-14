@@ -279,6 +279,86 @@ def manifest_check(tools: Path = typer.Option(..., help="tools.json con lo que e
     raise typer.Exit(0 if all(d.accepted for d in decisions) else 1)
 
 
+# ---------------------------------------------------------------- hooks y exec (Juliana)
+
+hook_app = typer.Typer(no_args_is_help=True, help="Hooks del agente: los invoca Claude Code, no el usuario (§7.6)")
+hooks_app = typer.Typer(no_args_is_help=True, help="Instalación de los hooks en un agente")
+app.add_typer(hook_app, name="hook")
+app.add_typer(hooks_app, name="hooks")
+
+
+def _run_hook(kind: str) -> None:
+    from .integrations.hooks import main as hook_main
+    raise typer.Exit(hook_main(kind))
+
+
+@hook_app.command("prompt")
+def hook_prompt_cmd():
+    """UserPromptSubmit: firma el prompt, lo envía al gateway y guarda el recibo."""
+    _run_hook("prompt")
+
+
+@hook_app.command("pre-tool")
+def hook_pre_tool_cmd():
+    """PreToolUse: consulta tool-check y deniega la herramienta si el gateway la rechazó."""
+    _run_hook("pre-tool")
+
+
+@hook_app.command("session-start")
+def hook_session_start_cmd():
+    """SessionStart: asocia la sesión del agente con la del gateway."""
+    _run_hook("session-start")
+
+
+@hooks_app.command("install")
+def hooks_install(agent: str = typer.Argument(..., help="claude-code (opencode y codex: roadmap)"),
+                  project: Path = typer.Option(Path("."), help="proyecto donde se instalan los hooks"),
+                  command: Optional[str] = typer.Option(None, help="comando owit que usarán los hooks"),
+                  yes: bool = typer.Option(False, "--yes", "-y", help="escribir sin preguntar"),
+                  dry_run: bool = typer.Option(False, "--dry-run", help="solo mostrar el diff")):
+    """Escribe los hooks en la configuración local del proyecto. Antes muestra el diff."""
+    if agent != "claude-code":
+        raise typer.BadParameter("por ahora solo claude-code; opencode y codex están en el roadmap")
+    import shutil
+    from .integrations import claude_code
+    owit = command or shutil.which("owit") or "owit"
+    try:
+        path, old, new = claude_code.plan_install(project, owit)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    if old == new:
+        typer.echo(f"{path}: los hooks ya están instalados")
+        return
+    typer.echo(claude_code.diff(path, old, new))
+    if dry_run:
+        return
+    if not yes and not typer.confirm(f"¿Escribir {path}?"):
+        raise typer.Exit(1)
+    claude_code.write(path, new)
+    typer.echo(f"hooks instalados en {path}; lanza el agente con `owit exec --user <usuario> -- claude`")
+
+
+@app.command("exec", context_settings={"allow_interspersed_args": False})
+def exec_cmd(cmd: list[str] = typer.Argument(..., help="comando del agente, después de `--`"),
+             user: str = typer.Option(..., help="user_id registrado en el gateway"),
+             key: Optional[Path] = typer.Option(None, help="llave privada del usuario (por defecto keys/<user>.key)"),
+             gateway: Optional[str] = typer.Option(None, help="URL del gateway (por defecto $OWIT_GATEWAY o localhost:8787)"),
+             upstream: Optional[str] = typer.Option(None, help="perfil del upstream para esta sesión"),
+             agent: Optional[str] = typer.Option(None, help="claude-code; si se omite, se deduce del comando"),
+             strict: bool = typer.Option(False, "--strict", help="rechazar los turnos sin prompt firmado"),
+             prompt: Optional[str] = typer.Option(None, help="firmar este prompt y pasarlo como argumento (agentes sin hooks)")):
+    """Crea una sesión en el gateway y lanza el agente a través de ella: `owit exec --user alice -- claude`."""
+    from .integrations.exec import DEFAULT_GATEWAY, ExecError, run_exec
+    try:
+        code = run_exec(cmd, user, key or Path("keys") / f"{user}.key",
+                        gateway or os.environ.get("OWIT_GATEWAY") or DEFAULT_GATEWAY,
+                        agent=agent, upstream=upstream, strict=strict, prompt=prompt)
+    except ExecError as e:
+        typer.echo(f"owit exec: {e}", err=True)
+        raise typer.Exit(2)
+    raise typer.Exit(code)
+
+
 def main() -> None:
     app()
 

@@ -1,0 +1,44 @@
+{
+ "claude_code": "2.1.321",
+ "exit_code": 0,
+ "integrity_ok": true,
+ "errors": [],
+ "entries": 42,
+ "signed_prompts": 1,
+ "receipts": 1,
+ "unsigned_reasons": {
+  "agent_injected": 1,
+  "system_role": 1
+ },
+ "history_mismatch": 0,
+ "mcp_decisions": {
+  "mcp__issues__list_issues": "accepted:ok",
+  "mcp__mail__send_email": "rejected:descriptor_mismatch"
+ },
+ "altered_tool_seen_by_model": false,
+ "tool_calls": [
+  {
+   "tool": "mcp__issues__list_issues",
+   "anomaly": null
+  },
+  {
+   "tool": "mcp__mail__send_email",
+   "anomaly": "stripped_tool_called"
+  }
+ ],
+ "tool_checks": [
+  {
+   "tool": "mcp__issues__list_issues",
+   "decision": "allow"
+  },
+  {
+   "tool": "mcp__mail__send_email",
+   "decision": "deny"
+  }
+ ],
+ "tools_executed_by_mcp_servers": [
+  "list_issues"
+ ],
+ "agent_session_recorded": true,
+ "ok": true
+}
