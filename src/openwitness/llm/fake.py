@@ -50,10 +50,14 @@ class ScriptedResponder:
         if k >= len(self.steps):
             return [{"type": "text", "text": "ok"}]
         st = self.steps[k]
+        offered = {t.get("name") for t in body.get("tools") or []}
+        uses = st.get("tool_uses", []) + ([st["tool_use"]] if "tool_use" in st else [])
+        if uses and not all(u["name"] in offered for u in uses):
+            return [{"type": "text", "text": "ok"}]   # petición auxiliar del agente (título, resumen…)
         blocks = []
         if "text" in st:
             blocks.append({"type": "text", "text": st["text"]})
-        for tu in st.get("tool_uses", []) + ([st["tool_use"]] if "tool_use" in st else []):
+        for tu in uses:
             blocks.append({"type": "tool_use", "name": tu["name"], "input": tu.get("input", {})})
         return blocks or [{"type": "text", "text": "ok"}]
 
