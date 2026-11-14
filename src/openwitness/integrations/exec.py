@@ -15,7 +15,7 @@ from typing import Mapping
 from .hooks import GatewayError, http_post, save_receipt
 
 DEFAULT_GATEWAY = "http://127.0.0.1:8787"
-AGENTS = {"claude": "claude-code"}                     # comando -> nombre del agente; opencode y codex: roadmap
+AGENTS = {"claude": "claude-code", "opencode": "opencode", "opencode-cli": "opencode"}   # comando -> agente
 _SECRET_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_OAUTH_TOKEN")
 
 
@@ -49,6 +49,9 @@ def agent_env(base: Mapping[str, str], agent: str, gateway: str, sid: str, token
     if agent == "claude-code":
         env.update({"ANTHROPIC_BASE_URL": f"{gateway}/s/{sid}", "ANTHROPIC_AUTH_TOKEN": token,
                     "ENABLE_TOOL_SEARCH": "false"})      # todas las herramientas en `tools` desde la 1.ª petición
+    elif agent == "opencode":                            # proveedor `anthropic` redirigido + plugin (§17.3)
+        from . import opencode
+        opencode.agent_env(env, base, gateway, sid, token)
     return env
 
 
@@ -79,6 +82,9 @@ def run_exec(cmd: list[str], user: str, key: Path, gateway: str = DEFAULT_GATEWA
     print(f"Open Witness: sesión {sid} · usuario {user} · agente {agent} · upstream {j.get('upstream')}",
           file=sys.stderr)
     code, ledger = 1, None
+    if agent == "opencode":
+        from .opencode import with_standalone
+        cmd = with_standalone(cmd)                      # sin esto, el prompt se va por el servicio en segundo plano
     try:
         if prompt is not None:                          # agentes sin hooks: se firma antes de lanzar (§7.6)
             from ..identity import KeyPair, sign_prompt

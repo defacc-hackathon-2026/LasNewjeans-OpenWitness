@@ -418,14 +418,21 @@ def hook_session_start_cmd():
 
 
 @hooks_app.command("install")
-def hooks_install(agent: str = typer.Argument(..., help="claude-code (opencode y codex: roadmap)"),
+def hooks_install(agent: str = typer.Argument(..., help="claude-code u opencode"),
                   project: Path = typer.Option(Path("."), help="proyecto donde se instalan los hooks"),
                   command: Optional[str] = typer.Option(None, help="comando owit que usarán los hooks"),
                   yes: bool = typer.Option(False, "--yes", "-y", help="escribir sin preguntar"),
                   dry_run: bool = typer.Option(False, "--dry-run", help="solo mostrar el diff")):
     """Escribe los hooks en la configuración local del proyecto. Antes muestra el diff."""
+    if agent == "opencode":
+        from .integrations import opencode
+        typer.echo("OpenCode no necesita instalación en el proyecto: `owit exec --user <usuario> -- opencode` le pasa\n"
+                   "el plugin y la redirección al gateway en cada sesión (OPENCODE_CONFIG_CONTENT), sin escribir archivos.\n"
+                   f"Plugin: {opencode.PLUGIN_DIR}\n"
+                   "Declara tus servidores MCP con `\"codemode\": false` para que el gateway pueda filtrar sus herramientas.")
+        return
     if agent != "claude-code":
-        raise typer.BadParameter("por ahora solo claude-code; opencode y codex están en el roadmap")
+        raise typer.BadParameter("agentes soportados: claude-code y opencode (codex: en curso)")
     import shutil
     from .integrations import claude_code
     owit = command or shutil.which("owit") or "owit"

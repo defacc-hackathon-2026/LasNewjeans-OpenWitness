@@ -41,14 +41,22 @@ IMPERATIVE_RE = re.compile(
     rf"|system prompt|asistentes?|agentes?|assistant|ai agent)\b")
 
 
-def tool_base(name: str) -> str:
+def tool_base(name: str, origin: str | None = None) -> str:
+    """Nombre original de la herramienta: sin `mcp__srv__` (Claude Code) ni `srv_` (OpenCode, §17.3).
+
+    El prefijo de OpenCode solo se quita si el origen registrado en la bitácora es ese servidor MCP.
+    """
     if name.startswith("mcp__"):
         return name[5:].partition("__")[2] or name
+    if origin and origin.startswith("mcp:"):
+        prefix = re.sub(r"[^A-Za-z0-9_-]", "_", origin[4:]) + "_"
+        if name.startswith(prefix) and len(name) > len(prefix):
+            return name[len(prefix):]
     return name
 
 
-def action_category(tool: str, args: dict) -> str:
-    base = tool_base(tool)
+def action_category(tool: str, args: dict, origin: str | None = None) -> str:
+    base = tool_base(tool, origin)
     cat = ACTION_OF.get(base, "other")
     if cat == "fetch" and (str(args.get("method", "GET")).upper() != "GET" or args.get("body") or args.get("data")):
         return "upload"
@@ -122,7 +130,7 @@ def rule_outcome(ev: EvidenceBundle, r2b: bool = True) -> RuleOutcome:
     occ = {n: occurrences(a, ev.items) for n, a in enumerate(args)}
     aprov = arg_provenance(args, occ)
     evidence = _evidence(ev, occ)
-    cat = action_category(ev.tool, ev.args)
+    cat = action_category(ev.tool, ev.args, ev.action.meta.get("origin"))
     signed_texts = ev.texts("user_signed")
     unsigned_texts = ev.texts("user_unsigned")
     signed_intent = intent_covers(cat, signed_texts)

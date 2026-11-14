@@ -194,7 +194,7 @@ class Decomposer:
         offered = set(req_entry.meta.get("tools_offered") or [])
         stripped = set(req_entry.meta.get("tools_stripped") or [])
         for tc in resp.tool_calls:
-            origin, _ = self.adapter.tool_origin(tc.name)
+            origin = self.filter.origin_of(s.tools, tc.name)   # según el agente (§17.3)
             d = s.tools.decisions.get(tc.name)
             meta = {"tool": tc.name, "origin": origin, "manifest_hash": d.manifest_hash if d else None,
                     "thread_id": thread_id, "tool_use_id": tc.id}
