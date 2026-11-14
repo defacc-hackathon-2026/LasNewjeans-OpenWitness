@@ -4,7 +4,9 @@
 >
 > Estado: **en implementación** (14 de noviembre). La especificación se validó el 13 de noviembre con un prototipo descartable en `../scratchpad/` (hallazgos en su README; resultados preliminares en §9.5). Las ramas de los tres están integradas: bitácora, gateway, firmas, manifiestos, hooks de Claude Code (G9), atribución con juez opcional (G10) y los benchmarks §9.1–§9.4 están en `src/` y `bench/`, con los números en `results/` y la ficha en `docs/ficha_tecnica.pdf`. Los ajustes al SPEC que salieron de la implementación (formatos de §6.4, comprobaciones de §7.4, contratos de §7.3, §7.5 y §7.7) quedan en el historial de git.
 >
-> Hecho para el **Defensive Acceleration Hackathon** (14 de noviembre de 2026, Track 1). El alcance separa lo que se construye **el día del hackathon** (§2, §12) de lo que queda en el **roadmap** (§16).
+> **Release [v1.0.0](https://github.com/defacc-hackathon-2026/LasNewjeans-OpenWitness/releases/tag/v1.0.0)** (14 de noviembre, 11:45): congela G1–G10 con la ficha técnica en PDF y el resumen como adjuntos. Es el respaldo de la entrega. Con el tiempo que queda se intenta la **Fase 2** (§17): OpenCode, Codex y una interfaz de monitoreo. Si no llega a tiempo, se entrega v1.0.0.
+>
+> Hecho para el **Defensive Acceleration Hackathon** (14 de noviembre de 2026, Track 1). El alcance separa lo que se construye **el día del hackathon** (§2, §12, y la Fase 2 de §17) de lo que queda en el **roadmap** (§16).
 
 ---
 
@@ -78,8 +80,15 @@ Los dos pasan por el mismo gateway, así que la bitácora, las firmas y la atrib
 - G10. Juez LLM para los casos que las reglas no deciden, con un perfil local o con Claude (§7.7). La prueba con un modelo real mostró que las inyecciones sutiles caen justo ahí (§9.5), así que es el primer opcional que más valor agrega a la atribución.
 - G11. Rekor real como ancla.
 
+### Fase 2 (tarde del 14 de noviembre, después de v1.0.0)
+G1–G10 ya están en v1.0.0. Detalle, responsables y reglas de corte en §17:
+- G12. **OpenCode** a través del gateway, con un plugin que firma los prompts y bloquea herramientas.
+- G13. **Codex** a través del gateway, con un adaptador para la Responses API y los mismos hooks de Claude Code.
+- G14. **Monitor**: interfaz web de solo lectura que muestra en vivo las sesiones, la línea de tiempo con procedencias, el estado de integridad, las alertas y la atribución.
+- G15. *(opcional)* **Agentes genéricos** compatibles con Anthropic Messages, sin hooks (sin no repudio, L8).
+
 ### Roadmap (después del hackathon)
-OpenCode, Codex, traducción entre protocolos, proxy MCP, AgentDojo, passkeys y UI de auditoría (§16).
+Traducción entre protocolos, Chat Completions, proxy MCP, AgentDojo, passkeys y lo que no entre de la Fase 2 (§16).
 
 ### No-objetivos
 - Modificar el código de los agentes.
@@ -196,11 +205,11 @@ ToolFilter sigue funcionando porque evalúa `tools` en cada petición (§6.3). A
 > - En `claude -p` lanzado desde un script hay que pasar `stdin` vacío (`< /dev/null`); si no, Claude Code espera 3 s por si llega algo por stdin.
 
 ### 5.4 Agentes soportados
-Revisado contra la documentación de cada agente en noviembre de 2026 (fuentes en §15). **El día del hackathon solo se integra Claude Code**; el análisis de OpenCode y Codex queda hecho para el roadmap (§16).
+Revisado contra la documentación de cada agente en noviembre de 2026 (fuentes en §15). **v1.0.0 solo integra Claude Code.** OpenCode y Codex se intentan en la Fase 2 (§17.3 y §17.4), con las versiones instaladas en la máquina de Adrian: **OpenCode 2.3.0** y **Codex CLI 0.169.0**.
 
 | | **Claude Code** | **OpenCode** | **Codex** | **Agente de referencia** |
 |---|---|---|---|---|
-| **Estado** | **Día del hackathon** (G9) | Roadmap | Roadmap | **Día del hackathon** (benchmark) |
+| **Estado** | ✅ v1.0.0 (G9) | Fase 2 (G12) | Fase 2 (G13) | ✅ v1.0.0 (benchmark) |
 | **Redirigir al gateway** | `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` (soporte oficial de LLM gateways) | `settings.baseURL` del proveedor `anthropic` en la configuración de OpenCode | Proveedor propio en `config.toml`: `[model_providers.owit]` con `base_url`, `env_key` y `wire_api = "responses"` | `base_url` del SDK |
 | **Protocolo hacia el gateway** | Anthropic Messages | Anthropic Messages (reutiliza el adaptador). Alternativa: Chat Completions | **Solo OpenAI Responses**: el modo Chat Completions quedó obsoleto | Anthropic Messages |
 | **Firma del prompt** | Hook `UserPromptSubmit` | Hook `prompt` de un plugin de servidor (TypeScript) | Hook `UserPromptSubmit` (campo `prompt`) | Directa (código nuestro) |
@@ -502,7 +511,7 @@ Servidor HTTP asíncrono (Starlette/FastAPI + `httpx` con streaming).
 | `POST /sessions` | `owit exec`, `refagent` | Crea la sesión (`user_id`, `agent`, `upstream`, `policy`) y devuelve `sid` y token |
 | `POST /s/<sid>/prompts` | Hook de prompt, `refagent` | Verifica el `SignedPrompt`, lo registra como `user_prompt` y devuelve el recibo (§6.6) |
 | `POST /s/<sid>/v1/messages` | Claude Code, OpenCode, `refagent` | Proxy del LLM con descomposición (§6.5), protocolo Anthropic Messages |
-| `POST /s/<sid>/v1/responses` | *(roadmap)* Codex | Igual, protocolo OpenAI Responses |
+| `POST /s/<sid>/v1/responses` | *(Fase 2, G13)* Codex | Igual, protocolo OpenAI Responses (§17.4) |
 | `POST /s/<sid>/v1/chat/completions` | *(roadmap)* OpenCode con proveedor local, otros | Igual, protocolo OpenAI Chat Completions |
 | `GET /s/<sid>/v1/models` | Agentes que listan modelos | Reenvía al upstream sin registrar |
 | `POST /s/<sid>/tool-check` | Hooks de herramienta de los tres agentes | `{tool, args}` → `allow` o `deny` con motivo; la decisión se registra como entrada `tool_check` que apunta al `tool_call` |
@@ -563,14 +572,14 @@ class Decomposer:
 **Claude Code (`integrations/claude_code/`)** — día del hackathon (G9)
 - Hooks `SessionStart`, `UserPromptSubmit` y `PreToolUse` en la configuración local del proyecto, apuntando a los comandos de arriba.
 
-**OpenCode (`integrations/opencode/`)** — roadmap
+**OpenCode (`integrations/opencode/`)** — Fase 2 (G12, §17.3)
 - Plugin de servidor en TypeScript (`owit-opencode-plugin.ts`) que registra tres hooks:
   - `ctx.session.hook("prompt", …)` → `owit hook prompt`;
   - `ctx.permission.hook("evaluate", …)` → `owit hook pre-tool`, y pone `effect = "deny"` con el motivo si corresponde;
   - opcionalmente `ctx.tool.hook("execute.before", …)`, solo para registrar.
 - La configuración generada por `owit exec` redirige el proveedor `anthropic` a `http://<gateway>/s/<sid>` y usa el token de sesión como credencial.
 
-**Codex (`integrations/codex/`)** — roadmap
+**Codex (`integrations/codex/`)** — Fase 2 (G13, §17.4)
 - Hooks `SessionStart`, `UserPromptSubmit` y `PreToolUse` en `config.toml` (`[[hooks.<Evento>]]`), con los mismos comandos que Claude Code.
 - `owit hooks install codex` recuerda que hay que aprobarlos con `/hooks` antes de usarlos.
 
@@ -790,10 +799,10 @@ owit manifest sign --server sentry-mcp --tools tools.json --key keys/sentry.key 
 
 # gateway y agentes
 owit gateway start [--config owit.toml] [--upstream <perfil>]
-owit hooks install claude-code [--project .]                                       # opencode|codex: roadmap
+owit hooks install claude-code [--project .]                                       # opencode|codex: Fase 2
 owit exec --user alice [--upstream <perfil>] [--strict] -- claude
-owit exec --user alice -- opencode                                                   # roadmap
-owit exec --user alice --upstream lmstudio -- codex                                  # roadmap
+owit exec --user alice -- opencode --standalone                                      # Fase 2 (G12, §17.3)
+owit exec --user alice --upstream lmstudio_openai -- codex                           # Fase 2 (G13, §17.4)
 owit exec --user alice --prompt "…" -- <agente sin hooks en modo no interactivo>
 owit hook prompt | pre-tool | session-start           # los invocan los hooks, no el usuario
 
@@ -805,6 +814,7 @@ owit llm check --profile lmstudio
 owit verify data/ledger/<session>.jsonl [--receipts ~/.owit/receipts/]
 owit attribute data/ledger/<session>.jsonl --seq 42 [--judge <perfil>|--no-judge]
 owit show data/ledger/<session>.jsonl [--seq 42]      # reconstruye y muestra el contexto de una acción
+owit monitor [--data data/] [--listen 127.0.0.1:8790] [--no-content]   # Fase 2 (G14, §17.5): monitor web de solo lectura
 
 # benchmark y demo
 owit agent run --scenario bench/scenarios/inj_sentry_exfil_01.yaml [--upstream fake|<perfil>]
@@ -1235,6 +1245,11 @@ Encabezado: título, equipo, Track 1 y link al repositorio. Después, las seis s
 - [x] Juez (G10): se probó con `gpt-oss-20b` en LM Studio. Reglas+juez 30/35 frente a 35/35 de las reglas solas, así que el juez queda **apagado por defecto** (`owit attribute --judge <perfil>` lo activa).
 - [x] Frecuencia de anclaje: `N = 20` entradas o `T = 30` s, y siempre al cerrar (configurable en `[gateway]` con `anchor_every` y `anchor_interval_s`).
 - [ ] Licencia del repositorio (la guía no exige ninguna).
+- [x] Respaldo de la entrega: release **v1.0.0** (tag sobre `d838293`), con la ficha en PDF y el resumen adjuntos.
+- [x] Fase 2 (§17): OpenCode (G12), Codex (G13) y monitor (G14); agentes genéricos (G15) solo si sobra tiempo.
+- [x] El monitor es un **proceso aparte y de solo lectura** que lee `data/`, no una ruta del gateway (§17.5).
+- [ ] ¿Se actualizan la ficha y el resumen con la Fase 2, o se entregan los de v1.0.0? Se decide a las 15:00 (§17.7).
+- [ ] Versión en `pyproject.toml`: sigue en `0.1.0`. Se sube a `1.1.0` solo si sale el release de la Fase 2.
 
 ---
 
@@ -1260,8 +1275,10 @@ Documentación consultada en noviembre de 2026. Hay que volver a comprobarla con
 ---
 
 ## 16. Después del hackathon (roadmap)
-- **OpenCode** (§5.4): plugin de TypeScript; reutiliza el adaptador de Anthropic.
-- **Codex** (§5.4): adaptador para la Responses API; Codex con LM Studio como camino para modelos locales.
+- Lo que no entre de la **Fase 2** (§17): OpenCode, Codex, el monitor o sus partes recortadas.
+- **Chat Completions** como tercer adaptador (OpenCode con proveedor local, Aider y otros agentes que solo hablan la API de OpenAI).
+- **Gemini CLI** y otros agentes con protocolo propio: un adaptador por protocolo.
+- **Monitor con varios auditores**: autenticación, roles y política de acceso a los blobs (§10.1).
 - **Rekor real** o sello RFC 3161 como ancla.
 - **Juez LLM** evaluado por perfil, si no entró el día.
 - **AgentDojo** y 20 escenarios por clase.
@@ -1270,4 +1287,177 @@ Documentación consultada en noviembre de 2026. Hay que volver a comprobarla con
 - **Passkeys/WebAuthn** y un demonio local de firma (`owit agentd`).
 - **Cifrado de blobs** con llave por sesión (*crypto-shredding*).
 - **Escáner heurístico** de descripciones de herramientas (L5).
-- **UI de auditoría.**
+
+---
+
+## 17. Fase 2: después del release 1.0.0 (tarde del 14 de noviembre)
+
+### 17.1 Punto de partida
+- **v1.0.0** ([release](https://github.com/defacc-hackathon-2026/LasNewjeans-OpenWitness/releases/tag/v1.0.0), tag sobre `d838293`) contiene G1–G10, 184 tests en verde, los números de `results/` y la ficha técnica en PDF. **Es lo que se entrega si la Fase 2 no llega a tiempo.**
+- La Fase 2 agrega funcionalidad sin tocar lo que v1.0.0 ya demuestra. Nada entra a `main` si rompe una prueba o cambia un número de §9.1 o §9.3 (§17.8).
+- Versiones instaladas en la máquina de Adrian: Claude Code 2.1.323, **OpenCode 2.3.0** y **Codex CLI 0.169.0**.
+
+### 17.2 Objetivos, prioridad y responsables
+
+| Meta | Qué | Responsable | Riesgo | Valor para el jurado | Mínimo que ya vale |
+|---|---|---|---|---|---|
+| **G12** | OpenCode a través del gateway, con plugin de firma y bloqueo | Juliana | Bajo: reutiliza el adaptador Anthropic | "No depende del agente", con un segundo agente real | Proxy sin plugin: bitácora y atribución sin no repudio (L8) |
+| **G13** | Codex a través del gateway (Responses API) con hooks | Adrian | **Alto**: adaptador y descomposición nuevos en el camino crítico | Tercer agente y segundo protocolo; modelo local con LM Studio sin traducción | Solo observación: el gateway registra las peticiones de Codex y `owit verify` pasa |
+| **G14** | Monitor web de solo lectura | Andres | Bajo: proceso aparte, no toca el gateway | La demo se *ve*: alertas y atribución en vivo | Lista de sesiones, línea de tiempo y estado de integridad |
+| G15 | Agentes genéricos con Anthropic Messages, sin hooks | Quien termine primero | Bajo | Poco: es una variante de G12 sin plugin | — |
+
+Los tres trabajan en paralelo y en módulos distintos (`integrations/opencode/`, `gateway/protocols/openai_responses.py`, `monitor/`). El único archivo compartido es `cli.py`: cada uno agrega su subcomando en un bloque propio y se avisa antes del merge.
+
+### 17.3 G12 — OpenCode (Juliana)
+
+**Redirección al gateway.** OpenCode habla Anthropic Messages con el proveedor `anthropic`, así que usa la ruta `/s/<sid>/v1/messages` que ya existe, sin cambios en el gateway.
+- `owit exec -- opencode` genera una configuración temporal que redirige el proveedor `anthropic` a `http://<gateway>/s/<sid>` y usa el token de sesión como API key, y la pasa por la variable de configuración que acepte OpenCode 2.3.0 (hay que verificar el nombre).
+- **OpenCode 2.3.0 corre por defecto un servicio en segundo plano** (`opencode service`), que no hereda las variables de `owit exec`. Por eso `owit exec` lo lanza con **`--standalone`** (servidor privado del proceso). Sin eso, el prompt se va por el servicio ya abierto y no pasa por la sesión.
+- El modo no interactivo para las pruebas es `opencode run --standalone --format json "<prompt>"`.
+
+**Plugin `integrations/opencode/owit-opencode-plugin.ts`.** Unas decenas de líneas, sin dependencias:
+- hook de prompt → ejecuta `owit hook prompt` con el JSON por stdin, en el formato de Claude Code (`{"hook_event_name": "UserPromptSubmit", "prompt", "session_id"}`), para reutilizar `hooks.py` sin cambios;
+- hook de permisos (`permission.evaluate` según la documentación) → `owit hook pre-tool`; si la respuesta es `deny`, pone `effect = "deny"` con el motivo;
+- `owit hooks install opencode [--project .]` copia el plugin a la carpeta de plugins del proyecto y muestra el diff antes de escribir.
+
+> ⚠️ **Verificar primero (12:00–12:30)**, en este orden, porque cada punto decide el siguiente:
+> 1. que la redirección por `baseURL` funciona con 2.3.0 y `--standalone`: la petición llega al gateway con `fake`;
+> 2. los nombres reales de los hooks de plugin en 2.3.0 (la documentación de §15 es de una versión anterior);
+> 3. cómo nombra OpenCode las herramientas MCP en `tools`, y si reescribe sus descripciones. Si las reescribe, el hash del manifiesto no coincide y el gateway las quitaría todas (falso positivo): en ese caso, `ToolFilter` necesita un modo por agente que se registre en `manifest_decision`;
+> 4. qué hace con los mensajes sintéticos y de compactación (§5.4): deben quedar como `user_text_unsigned` o `agent_injected`, nunca como texto firmado.
+
+**Hecho cuando:**
+- hay fixtures de OpenCode 2.3.0 en `tests/fixtures/opencode/2.3.0/` (grabadas con `owit gateway start --record`), y al reproducirlas quedan 0 textos sin emparejar y 0 `history_mismatch`;
+- `bench/opencode_probe.py` (como `claude_code_hooks_probe.py`) muestra que el prompt va firmado y con recibo, y que una herramienta MCP alterada después de firmar no llega al modelo y el plugin la deniega;
+- `owit verify` pasa y `owit attribute` da el mismo veredicto que con Claude Code en el escenario de la demo.
+
+### 17.4 G13 — Codex y la Responses API (Adrian)
+
+**Generalizar el gateway (antes que el adaptador).** Hoy `Gateway` usa un único `AnthropicMessagesAdapter`. Cambios:
+- `Gateway.adapters: dict[str, ProtocolAdapter]` con `anthropic_messages` y `openai_responses`. `POST /sessions` acepta `protocol` (por defecto `anthropic_messages`); `owit exec` lo elige según el agente. El `Decomposer` de la sesión recibe ese adaptador.
+- Al crear la sesión se comprueba que el upstream declara ese protocolo (§7.7). Si no, error 400 con un mensaje claro, no un fallo a mitad de sesión.
+- `proxy_messages` pasa a `proxy(protocol, …)`. La ruta `/s/<sid>/v1/responses` llama al mismo método. El invariante de §7.5 se mantiene: **la respuesta y sus `tool_call` se registran justo antes de reenviar el evento final**, que en Responses es `response.completed`.
+- `session_start` registra el protocolo real de la sesión (hoy queda fijo en `anthropic_messages`).
+
+**Adaptador `gateway/protocols/openai_responses.py`**
+
+| Responses API | Tipo neutral | Notas |
+|---|---|---|
+| `instructions` | `system` | |
+| `input[]` con `type: "message"` y rol `user` / `developer` / `assistant` | `Message` | `developer` se trata como `system` (§6.5) |
+| `function_call` (`call_id`, `name`, `arguments` como string JSON) | `ToolCall` | `arguments` se parsea antes del taint (§7.9 paso 3); `call_id` cumple el papel de `tool_use_id` |
+| `function_call_output` (`call_id`, `output`) | `tool_result` | Origen según el nombre de la herramienta (`tool_origin`) |
+| `custom_tool_call` / `custom_tool_call_output` (p. ej. `apply_patch`) | `ToolCall` / `tool_result` | `builtin:<nombre>` |
+| `reasoning` con `encrypted_content` | blob opaco con procedencia `model` | Se compara por hash en el historial; nunca se descifra |
+| `web_search_call` y otras herramientas alojadas | `tool_call` + `tool_result` con origen `hosted:<nombre>` | `meta.hook_coverage = false` (L9) |
+| `tools[]` (`type: "function"` o `"custom"`) | `ToolDef` | `strip_tools` filtra aquí y ajusta `tool_choice` |
+
+- **Stream.** `ResponsesSSEReassembler` arma la respuesta con `response.output_item.added`, `response.output_text.delta`, `response.function_call_arguments.delta`, `response.output_item.done` y `response.completed`. Los bytes se devuelven tal cual, como con Anthropic.
+- **Historial.** En Responses, un turno del asistente son varios ítems (`reasoning`, `message`, `function_call`). La comprobación de `history_mismatch` compara **ítem por ítem** con lo que el gateway reenvió, no por mensaje.
+- **Historial incompleto.** Si la petición trae `previous_response_id`, el gateway no tiene el contexto completo: se registra con `meta.anomaly = "incomplete_history"` y la atribución de esas acciones queda en `AMBIGUOUS` con ese motivo. `owit exec` lanza Codex con `store = false` para evitarlo.
+- **Upstream.** Nuevo `llm/openai_upstream.py` para `openai_compat` con `responses` (streaming con `httpx`, igual que `anthropic_upstream.py`), y modo Responses en `FakeUpstream` para que las pruebas sean deterministas y sin red.
+
+**Lanzamiento.** `owit exec -- codex` agrega:
+```
+-c model_provider="owit"
+-c model_providers.owit.name="Open Witness"
+-c model_providers.owit.base_url="http://<gateway>/s/<sid>/v1"
+-c model_providers.owit.env_key="OWIT_TOKEN"
+-c model_providers.owit.wire_api="responses"
+```
+Además quita `OPENAI_API_KEY`, `OPENAI_BASE_URL` y las credenciales de Codex del entorno del agente (se agregan a `_SECRET_ENV` en `integrations/exec.py`).
+
+**Hooks.** En Codex 0.169.0 los hooks están activos por defecto (`codex features list`: `hooks stable true`). `owit hooks install codex` escribe `[[hooks.SessionStart]]`, `[[hooks.UserPromptSubmit]]` y `[[hooks.PreToolUse]]` con los mismos comandos `owit hook …` y recuerda que hay que **aprobarlos una vez con `/hooks`** (§5.4).
+
+> ⚠️ **Verificar primero (12:00–12:30)** con `bench/codex_probe.py`, un servidor mínimo que guarda la primera petición de Codex y responde con un SSE de Responses guionizado:
+> 1. que Codex llama a `POST <base_url>/responses` por HTTP con SSE (en 0.169.0, `responses_websockets` figura como `removed`);
+> 2. que envía el historial completo con `store = false` y no depende de `previous_response_id`;
+> 3. que el demonio que arranca solo (`daemon_auto_start`) no hace las peticiones por fuera del proceso lanzado (si las hace, `owit exec` lo desactiva con `--disable daemon_auto_start`);
+> 4. cómo nombra Codex las herramientas MCP en `tools`, y si reescribe sus descripciones o esquemas (el mismo riesgo de falso positivo que en §17.3);
+> 5. que los hooks se disparan en `codex exec` y qué campos trae `PreToolUse` (¿hay un equivalente de `tool_use_id`?).
+>
+> **Si a las 12:30 el punto 1 o el 2 fallan, G13 se reduce al mínimo de §17.2** (observación sin hooks) o se corta.
+
+**Hecho cuando:**
+- hay fixtures de Codex 0.169.0 en `tests/fixtures/codex/0.169.0/`, y `tests/test_decompose_responses.py` las reproduce con 0 textos sin emparejar y 0 `history_mismatch`;
+- `codex exec` a través del gateway funciona con `fake` (Responses) y con `lmstudio_openai` (`gpt-oss-20b`), y `owit verify` pasa;
+- con los hooks aprobados, el prompt va firmado y una herramienta MCP alterada se quita y se deniega;
+- **§9.1 sigue en 364/364 y §9.4 no empeora** con el gateway generalizado (se vuelven a correr ambos antes del merge).
+
+### 17.5 G14 — Monitor (Andres)
+
+**Arquitectura.** `owit monitor` es un **proceso aparte y de solo lectura** que lee `data/ledger/*.jsonl`, `data/blobs/` y `data/anchor/`. No es una ruta del gateway, por tres razones:
+- **no toca el camino crítico**, así que no cambia la latencia de §9.4 ni puede romper una sesión;
+- tiene el papel del **auditor** de §3: nunca tiene `gateway_sk` ni los tokens de sesión;
+- funciona igual **en vivo** (el gateway escribe la bitácora línea a línea) y **sobre bitácoras viejas** (las de la demo o las de un incidente).
+
+**Vistas**
+1. **Sesiones.** Usuario, agente y versión, upstream, protocolo, número de entradas, última actividad, contadores (prompts firmados y sin firma, `tool_call`, herramientas quitadas y denegadas, anomalías) y una insignia de integridad: *íntegra hasta `seq` N, anclada hasta M*, *pendiente de ancla* o *FALLA* (con la comprobación de §7.4 que falló).
+2. **Línea de tiempo de una sesión.** Las entradas en orden, con el color de su procedencia (§7.9): `user_signed`, `user_unsigned`, `mcp:*` / `builtin:*` / `hosted:*`, `model` y `gateway`. Las anclas se marcan en la línea.
+3. **Detalle de una acción.** Para un `tool_call`, lo mismo que `owit show` (el contexto exacto con procedencias) y el veredicto de `attribute`, con `arg_provenance` resaltado en los fragmentos donde aparece cada argumento.
+4. **Alertas.** Un feed con las entradas que un auditor querría ver sin buscarlas:
+
+| Alerta | Se deduce de | Nivel |
+|---|---|---|
+| La bitácora no verifica | `verify_ledger` | crítica |
+| Acción atribuida a una herramienta (`TOOL_INJECTED`, también `partial`) | `attribute` en modo `rules` sobre cada `tool_call` nuevo | alta |
+| Herramienta quitada por su manifiesto | `manifest_decision` con `decision = "rejected"` (y su `reason`) | alta |
+| Herramienta denegada por el hook | `tool_check` con `decision = "deny"` | alta |
+| El modelo llamó a una herramienta quitada o desconocida | `tool_call` con `meta.anomaly` | alta |
+| El historial no coincide con lo que reenvió el gateway | `context_reset` con `reason = "history_mismatch"` | media |
+| Texto de usuario sin firma (L8) | `user_text_unsigned` con un motivo distinto de `system_role` | informativa |
+
+**Atribución en vivo.** Solo con reglas, **nunca con el juez**: el juez cuesta tokens y también lee el contenido inyectado (§7.9 paso 5). El veredicto se muestra como *provisional* y depende de la integridad hasta el `seq` de la acción: si después falla `verify`, pasa a `UNVERIFIABLE` en la vista.
+
+**API JSON** (la usa la página y sirve para pruebas):
+
+| Ruta | Devuelve |
+|---|---|
+| `GET /api/sessions` | Resumen de cada sesión (vista 1) |
+| `GET /api/sessions/<sid>/entries?after=<seq>` | Entradas con procedencia y fragmento recortado |
+| `GET /api/sessions/<sid>/verify` | El `IntegrityReport` |
+| `GET /api/sessions/<sid>/actions/<seq>` | Contexto, veredicto y `arg_provenance` de un `tool_call` |
+| `GET /api/events` | SSE con las entradas nuevas y las alertas de todas las sesiones |
+
+**Implementación**
+- `src/openwitness/monitor/` con `server.py` (Starlette) y `static/index.html`: una sola página con JS sin framework, **sin CDN ni paso de build**, para que la demo funcione sin red.
+- La lectura en vivo revisa el tamaño de cada `.jsonl` cada 500 ms, sin dependencias nuevas, e ignora una última línea sin `\n` (el gateway todavía la está escribiendo).
+- `verify_ledger` corre al abrir una sesión, cada vez que llega un ancla y cada 5 s mientras haya cambios. Se mide cuánto tarda con la bitácora más grande de `results/`; si pasa de 200 ms, se baja la frecuencia.
+- `owit monitor --demo` genera las bitácoras de `bench.demo` y las abre, para el pitch.
+
+**Privacidad y doble uso (L6, §10).** El monitor muestra a quién se le atribuye cada acción, así que tiene la misma política de acceso que el auditor:
+- escucha en `127.0.0.1` por defecto; para escuchar en otra interfaz exige `--token` (o `OWIT_MONITOR_TOKEN`);
+- los fragmentos se recortan a 280 caracteres, y con `--no-content` solo se muestran metadatos y hashes, nunca el contenido de los blobs;
+- es de solo lectura: ninguna ruta escribe en `data/`.
+
+**Hecho cuando:**
+- `owit monitor --demo` muestra las dos sesiones de la demo, con la alerta `TOOL_INJECTED(mcp:issues)` parcial de alice y `USER_INSTRUCTED` con no repudio de mallory;
+- después de `owit tamper --mode delete`, la insignia pasa a *FALLA* en menos de 2 s y las acciones de esa sesión pasan a `UNVERIFIABLE`;
+- con una sesión de Claude Code en vivo a través del gateway, las entradas aparecen en menos de 1 s;
+- `tests/test_monitor.py` prueba la API con el `TestClient` de Starlette, incluido `--no-content`;
+- hay una captura en `docs/img/monitor.png` para la ficha y el pitch.
+
+### 17.6 G15 — Agentes genéricos (opcional)
+`owit exec --agent anthropic-env -- <comando>` solo exporta `ANTHROPIC_BASE_URL` y `ANTHROPIC_AUTH_TOKEN` con los valores de la sesión. Sirve para cualquier agente que hable Anthropic Messages y acepte esas variables. Sin hooks no hay firma ni bloqueo: la atribución funciona sin no repudio (L8), y `--prompt "…"` firma el prompt inicial en modo no interactivo (§7.6). Los agentes que solo hablan Chat Completions o protocolos propios (Gemini CLI) quedan en el roadmap (§16).
+
+### 17.7 Cronograma de la tarde
+
+| Hora | Qué | Punto de control |
+|---|---|---|
+| 11:45 | ✅ Release v1.0.0 y este SPEC | — |
+| 12:00–12:30 | Cada uno verifica las incógnitas de su meta (las cajas ⚠️ de §17.3 y §17.4); Andres arma el servidor del monitor sobre las bitácoras de la demo | **12:30: seguir, reducir o cortar** G12 y G13 |
+| 12:30–13:15 | Almuerzo | — |
+| 13:15–14:30 | Implementación, cada uno en su rama (`juliana/opencode`, `adrian/codex`, `andres/monitor`) | **14:30:** cada meta cumple su "Hecho cuando" o su mínimo de §17.2 |
+| 14:30–15:00 | Pruebas, merges a `main` uno por uno (primero el monitor, que no toca el gateway; después OpenCode; Codex al final) | **15:00: congelar `main`** |
+| 15:00–15:30 | Volver a correr §9.1, §9.3 y §9.4 si cambió el gateway; README; decidir si se actualizan la ficha y el resumen | Ficha en 2 páginas (`docs/ficha_pdf.py` lo comprueba) |
+| 15:30 | **Release v1.1.0** (`pyproject.toml` a `1.1.0`) si entró al menos una meta; si no, v1.0.0 sigue siendo la entrega | — |
+| 15:45–16:00 | **Enviar el formulario** con el link al repo | **16:00: enviado** |
+| 16:00–17:00 | Ensayo del pitch | 17:00: cierre |
+
+### 17.8 Reglas de integración y de corte
+- **Nada entra a `main`** sin `uv run pytest -q` en verde, §9.1 en 364/364 y §9.3 en 47/47 sin falsos positivos. Si una meta rompe algo a las 15:00, se queda en su rama y se menciona como trabajo en curso.
+- **Siempre hay una entrega lista:** si `main` se rompe, se vuelve al tag `v1.0.0`.
+- **Orden de corte:** G15 → G13 completo (queda el mínimo de observación, o nada) → alertas y atribución en vivo de G14 (quedan sesiones, línea de tiempo e integridad) → plugin de G12 (queda el proxy).
+- **Ficha y resumen:** solo cambian si una meta entra completa antes de las 15:00. En la ficha, una fila en "Resultados" ("Agentes reales: Claude Code, OpenCode, Codex") y media línea en "Defensa"; si no cabe en 2 páginas, no se cambia. El resumen debe seguir entre 150 y 250 palabras.
+- **Pitch:** si G14 entra, 10 s de la demo grabada se reemplazan por el monitor mostrando la alerta de alice y la insignia en *FALLA*. Se graba antes de las 15:30 o no se usa.
+- **Citas (§10.4):** el plugin, el adaptador y el monitor se escribieron con ayuda de IA; se agregan a la lista del README con su revisor.
