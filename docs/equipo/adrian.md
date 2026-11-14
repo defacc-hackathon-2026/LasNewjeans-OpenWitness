@@ -79,6 +79,8 @@ Atribución sobre la bitácora del probe (reglas): `list_issues` → `USER_INSTR
 
 Toqué fuera de mis módulos, en cambios chicos y con tests: `integrations/exec.py` (Juliana: `codex` en `AGENTS`, `_SECRET_ENV`, `AGENT_PROTOCOL`), `cli.py` (bloque de `hooks install codex`), `attribution/attribute.py` y `rules.py` (Andres: `incomplete_history` → `AMBIGUOUS`; categorías de `exec_command`, `apply_patch`…), `ledger/verify.py` (comprobación 10 ítem por ítem). Avisar antes del merge (§17.2).
 
+**Integración (14 de noviembre, 13:00–13:25):** G14 (monitor) → G12 (OpenCode, la mezcló Juliana) → G13 (PR #2) en `main`, en el orden de §17.7. Sobre el árbol integrado: 232 tests, §9.1 364/364, §9.3 47/47, §9.2 idéntico, §9.4 sin empeorar y los tres probes de agentes reales con `ok: true`. **Release v1.1.0** publicado con la ficha (2 páginas) y el resumen (243 palabras). Diagrama de arquitectura actualizado (OpenCode, Codex, Responses API y monitor). Pendiente para el pitch: grabar los ~10 s del monitor con la interfaz final de Andres antes de las 15:30.
+
 ## Lo que entregas a los demás
 
 - ✅ Repo, `pyproject.toml` y `types.py` (en `main`). El comando `owit` entra por `openwitness.entry:main`.
