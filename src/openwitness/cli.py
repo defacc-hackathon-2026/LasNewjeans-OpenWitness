@@ -20,6 +20,8 @@ llm_app = typer.Typer(no_args_is_help=True, help="Perfiles de LLM (§7.7)")
 app.add_typer(gateway_app, name="gateway")
 app.add_typer(bench_app, name="bench")
 app.add_typer(llm_app, name="llm")
+manifest_app = typer.Typer(no_args_is_help=True, help="Manifiestos MCP firmados (§6.3)")
+app.add_typer(manifest_app, name="manifest")
 
 DATA = Path(os.environ.get("OWIT_DATA", "data"))
 REPO = Path(__file__).resolve().parents[2]
@@ -192,6 +194,81 @@ def fake_serve(port: int = 8788, script: Optional[Path] = None):
     from .llm.fake import ScriptedResponder, fake_app
     uvicorn.run(fake_app(ScriptedResponder.load(script) if script else None), host="127.0.0.1", port=port,
                 log_level="warning")
+
+
+# ---------------------------------------------------------------- llaves y manifiestos (Juliana)
+
+@app.command("keygen")
+def keygen(out: Path = typer.Option(..., help="archivo de la llave privada, p. ej. keys/alice.key"),
+           register: Optional[str] = typer.Option(None, help="user_id con el que se registra la llave pública"),
+           registry: Path = typer.Option(Path("keys/registry.json"), help="registro de llaves de usuario"),
+           force: bool = typer.Option(False, "--force", help="sobrescribir una llave que ya existe")):
+    """Genera una llave Ed25519 (permisos 600) y, con --register, la anota en el registro."""
+    from .identity import KeyPair, KeyRegistry
+    if out.exists() and not force:
+        raise typer.BadParameter(f"{out} ya existe; usa --force para reemplazarla")
+    kp = KeyPair.generate()
+    kp.save(out)
+    if register:
+        reg = KeyRegistry.load(registry)
+        reg.register(register, kp.public_str())
+        registry.parent.mkdir(parents=True, exist_ok=True)
+        reg.save(registry)
+        typer.echo(f"registrada como {register} en {registry}", err=True)
+    typer.echo(kp.public_str())
+
+
+def _load_tools(path: Path):
+    """tools.json: una lista de `{name, description, input_schema}` o `{"tools": [...]}` (el `tools/list` de MCP)."""
+    from .types import ToolDef
+    data = json.loads(path.read_text(encoding="utf-8"))
+    items = data.get("tools") if isinstance(data, dict) else data
+    if not isinstance(items, list) or not all(isinstance(t, dict) and t.get("name") for t in items):
+        raise typer.BadParameter(f"{path}: se esperaba una lista de herramientas con `name`")
+    return [ToolDef(t["name"], t.get("description") or "", t.get("input_schema") or t.get("inputSchema") or {})
+            for t in items]
+
+
+@manifest_app.command("sign")
+def manifest_sign(server: str = typer.Option(..., help="server_id, tal como lo nombra el agente (mcp__<server>__…)"),
+                  tools: Path = typer.Option(..., help="tools.json con las herramientas del servidor"),
+                  key: Path = typer.Option(..., help="llave privada del publicador"),
+                  out: Path = typer.Option(Path("manifests"), help="directorio de manifiestos de confianza"),
+                  publisher: Optional[str] = typer.Option(None, help="por defecto, el server_id"),
+                  version: str = typer.Option("1.0.0", help="server_version"),
+                  trust: bool = typer.Option(False, "--trust", help="agregar la llave a trust.json para ese publicador")):
+    """Firma el manifiesto de un servidor MCP y lo escribe en <out>/<server>.json."""
+    from .identity import KeyPair
+    from .manifests import TrustStore, manifest_hash, sign_manifest
+    kp = KeyPair.load(key)
+    pub = publisher or server
+    m = sign_manifest(kp, server, version, pub, _load_tools(tools))
+    out.mkdir(parents=True, exist_ok=True)
+    dest = out / f"{server}.json"
+    dest.write_text(json.dumps(m, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    typer.echo(f"{dest} · {len(m['body']['tools'])} herramientas · {manifest_hash(m)}", err=True)
+    if trust:
+        ts = TrustStore()
+        ts.load_dir(out)            # conserva publicadores y pins que ya había
+        ts.trust(pub, kp.public_str())
+        ts.save_trust(out)
+        typer.echo(f"{pub} confía en {kp.public_str()} ({out / 'trust.json'})", err=True)
+    typer.echo(manifest_hash(m))
+
+
+@manifest_app.command("check")
+def manifest_check(tools: Path = typer.Option(..., help="tools.json con lo que el servidor anuncia ahora"),
+                   server: str = typer.Option(..., help="server_id"),
+                   manifests: Path = typer.Option(Path("manifests"), help="directorio de manifiestos de confianza")):
+    """Evalúa las herramientas en vivo de un servidor contra el TrustStore, como lo haría el gateway."""
+    from .manifests import ManifestGate, TrustStore
+    ts = TrustStore()
+    ts.load_dir(manifests)
+    gate = ManifestGate(ts)
+    decisions = [gate.evaluate_tool(server, t, {}) for t in _load_tools(tools)]
+    for d in decisions:
+        typer.echo(f"{'ACEPTADA ' if d.accepted else 'RECHAZADA'} {d.origin}/{d.tool.name}: {d.reason}")
+    raise typer.Exit(0 if all(d.accepted for d in decisions) else 1)
 
 
 def main() -> None:
