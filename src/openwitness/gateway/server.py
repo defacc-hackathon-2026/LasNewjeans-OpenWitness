@@ -87,7 +87,7 @@ class Gateway:
                     "upstream": {k: v for k, v in up.describe().items() if isinstance(v, (str, int, bool))},
                     "gateway_pubkey": self.kp.public_str(), "policy": pol.to_dict()})
         self.sessions[sid] = s
-        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol), self.adapter)
+        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol, agent.get("name")), self.adapter)
         return s
 
     def add_prompt(self, s: Session, sp: dict) -> Receipt:
@@ -110,7 +110,7 @@ class Gateway:
     def tool_check(self, s: Session, tool: str, args: Any, tool_use_id: str | None = None,
                    mcp_server: Any = None) -> dict:
         d = s.tools.decisions.get(tool)
-        origin, _ = self.adapter.tool_origin(tool)
+        origin = self.decomposers[s.sid].filter.origin_of(s.tools, tool)   # según el agente (§17.3)
         if d is not None and not d.accepted:
             res = {"decision": "deny", "reason": f"Open Witness rechazó {tool}: {d.reason}"}
         elif d is None and origin.startswith("mcp:"):
