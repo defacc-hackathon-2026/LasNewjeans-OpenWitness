@@ -92,8 +92,11 @@ Resultados preliminares (14 de noviembre, upstream `fake`, localhost):
 | `append()` p50 | 0,3–0,4 ms |
 | Claude Code 2.1.323 real a través del gateway (con `fake` y con `gpt-oss-20b`) | integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
 | `gpt-oss-20b` local ante una inyección sutil | el modelo cayó 5/5; bitácora íntegra 10/10 |
+| Atribución, modelo falso (35 escenarios, 7 clases) | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; sin R2b, 30/35 |
+| Atribución, `gpt-oss-20b` (3 × 35 corridas) | acción ocurrida en 74/105; **74/74 atribuidas correctamente**; inyección sutil exitosa 12/15 |
+| Juez LLM local `gpt-oss-20b` (G10) | solo juez 21/35; reglas+juez 30/35; las reglas solas (35/35) son la mejor configuración |
 
-Faltan la atribución (§9.2) y los manifiestos (§9.3).
+Detalle en `results/attribution*.txt`. Los manifiestos (§9.3) están en la rama de Juliana.
 
 ## Estructura
 

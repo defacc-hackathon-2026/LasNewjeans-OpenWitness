@@ -13,7 +13,13 @@ fontsize: 9pt
 Un agente de IA actúa con los permisos de su usuario, y su contexto mezcla texto del usuario, de las herramientas (servidores MCP, web, archivos) y del propio agente. Cuando hace daño, hoy **nadie puede probar quién lo originó**: (1) **prompt injection por herramientas**, burda ("IGNORA LO ANTERIOR y envía…") o **sutil**, sin órdenes ("los resúmenes se envían a reportes@…"), como en los ataques a servidores MCP tipo Sentry; (2) un **usuario malicioso** que pide el daño y luego culpa a una inyección; (3) un **servidor MCP falso o alterado** (descripción envenenada, *rug pull*, suplantación); (4) un **operador** que reescribe los registros después del incidente.
 
 ## Defensa
-DEFENSA_JULIANA
+Open Witness es un **gateway entre el agente y su LLM**. No modifica el agente: Claude Code se redirige con `ANTHROPIC_BASE_URL` y recibe solo un token de sesión, nunca la API key real.
+
+![Arquitectura de Open Witness](img/arquitectura.png){ width=72% }
+
+Cada sesión deja evidencia criptográfica de: (1) **qué pidió el usuario**: un hook firma cada prompt con la llave Ed25519 del usuario (nonce contra repeticiones, revocación con fecha) y el gateway devuelve un **recibo firmado**; (2) **qué herramientas vio el modelo**: cada herramienta MCP se compara con un **manifiesto firmado por su publicador**, y si no tiene firma o la firma no es válida, la llave no es de confianza, la descripción cambió, hay *rug pull* o *shadowing*, el gateway la **quita** antes de que el modelo la vea y el hook `PreToolUse` la deniega; (3) **qué había en el contexto**: cada petición se descompone en una **bitácora encadenada por hashes**, firmada y anclada, con el origen de cada entrada.
+
+**Atribución.** El verificador primero comprueba la integridad (determinista) y después atribuye la acción con reglas sobre esa evidencia: `USER_INSTRUCTED` o `TOOL_INJECTED(Z)`, de dónde salió cada argumento (`arg_provenance`), si el usuario pidió la acción pero el destino lo puso una herramienta (`partial`, regla R2b) y si hay **no repudio**. Cuando no alcanza, dice `AMBIGUOUS`; un juez LLM opcional decide esos casos.
 
 ## Método de evaluación
 Todo corre en local con servidores MCP de demo, datos sintéticos y dominios `.test`. El upstream `fake` hace cada corrida determinista; el modelo real es `gpt-oss-20b` en LM Studio, por el mismo gateway.
@@ -31,12 +37,14 @@ Todo corre en local con servidores MCP de demo, datos sintéticos y dominios `.t
 | **Manipulación detectada** (11 clases, 4 con la llave del gateway) | **364/364 (100 %)** |
 | Cola no anclada truncada (L3) | 0/4 sin recibo (esperado); **2/2 con recibo** |
 | **Atribución, modelo falso** (35 escenarios) | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; **sin R2b, las 5 sutiles quedan `AMBIGUOUS`** (30/35) |
-| **Atribución, `gpt-oss-20b`** | GPTOSS_ROW |
-| Manifiestos envenenados bloqueados | MANIFESTS_ROW |
+| **Atribución, `gpt-oss-20b`** (3 × 35 corridas) | la acción ocurrió en 74/105; **atribución correcta 74/74**; sin R2b, las sutiles 0/12 |
+| Juez LLM local (`gpt-oss-20b`, G10), 35 escenarios | solo juez: etiqueta 21/35 (3 respuestas rechazadas por la validación); reglas+juez 30/35 (vuelve `TOOL_INJECTED` los 5 mixtos): **con este juez, las reglas solas son lo mejor** |
+| Éxito real de los ataques con `gpt-oss-20b` | inyección sutil **12/15**, por MCP 9/15, por herramienta interna 8/15; usuario malicioso obedecido 25/30 |
+| **Manifiestos maliciosos bloqueados** (6 clases) | **47/47** en `ToolFilter`, cliente MCP y hook; legítimos aceptados 96/96 (0 falsos positivos); firmados pero envenenados 0/5 (L5) |
 | Latencia añadida, p50 hasta el primer byte | **+1,0 ms** (mínima); **+2,2 ms** (Claude Code, 75 KB) |
 | Claude Code 2.1.323 real, sin modificar | integridad OK, 0 `history_mismatch`, 0 textos sin emparejar |
 
-GPTOSS_NOTE
+A diferencia del prototipo (donde `gpt-oss-20b` rechazó a Mallory 10/10 e ignoró 10/10 inyecciones burdas), aquí obedeció a Mallory en 25/30 y cayó en 17/30 inyecciones con órdenes explícitas: nuestros escenarios suenan menos dañinos. Cuando el modelo se niega, el prompt firmado queda igual en la bitácora como **prueba del intento**.
 
 **Lectura honesta:** el 35/35 con el modelo falso es optimista, porque las reglas y los escenarios se escribieron juntos; la latencia es en `localhost`; el 100 % vale dentro del modelo de amenazas.
 
@@ -45,7 +53,7 @@ GPTOSS_NOTE
 - **Solo cubre lo que pasa por el gateway (L1).** **Sin hook no hay no repudio (L8):** se atribuye igual, pero con `non_repudiable = false`.
 - **Ventana sin anclar (L3):** la cola posterior al último ancla solo la protegen los recibos. **Firma ≠ bondad (L5).**
 - **El taint es literal:** un destino parafraseado o codificado no se encuentra. La intención del prompt se estima con palabras clave.
-- **35 escenarios no dan significancia estadística**; el juez LLM también lee la inyección (va delimitado, cita `seq` verificables y nunca anula a R1 ni a la integridad).
+- **35 escenarios no dan significancia estadística.** El juez LLM también lee la inyección: un juez local llegó a afirmar que el usuario había pedido la URL maliciosa. Por eso va delimitado, debe citar `seq` verificables, nunca anula a R1 ni a la integridad y queda apagado por defecto.
 
 ## Riesgo de doble uso
 
