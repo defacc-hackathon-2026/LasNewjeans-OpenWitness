@@ -89,7 +89,7 @@ uv run owit monitor --data data --registry keys/registry.json [--no-content] [--
 ```
 
 API: `GET /api/sessions`, `/api/sessions/<sid>/entries?after=<seq>`, `/api/sessions/<sid>/verify`,
-`/api/sessions/<sid>/actions/<seq>`, `/api/alerts` y el SSE `/api/events`. Después de `owit tamper`, la sesión pasa a
+`/api/sessions/<sid>/actions/<seq>`, `/api/alerts`, `/api/stats` (agregados para la pestaña de estadísticas) y el SSE `/api/events`. Después de `owit tamper`, la sesión pasa a
 FALLA y sus acciones a `UNVERIFIABLE` en menos de 2 s. `uv run python -m bench.live_feed` escribe sesiones nuevas en
 un `data/` existente para verlas llegar.
 

@@ -421,6 +421,90 @@ class Monitor:
                                 "detail": {k: val for k, val in trace.items() if k != "rule"}},
                     "context": items, "user": ev.user_id}
 
+    def stats(self) -> dict[str, Any]:
+        """Agregados de todas las sesiones para la pestaña de estadísticas (solo metadatos y veredictos)."""
+        from datetime import datetime
+
+        def epoch(ts: str | None) -> float | None:
+            try:
+                return datetime.fromisoformat((ts or "").replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                return None
+
+        def bump(d: dict, *keys, n: int = 1) -> None:
+            for k in keys[:-1]:
+                d = d.setdefault(k, {})
+            d[keys[-1]] = d.get(keys[-1], 0) + n
+
+        with self.lock:
+            svs = list(self.sessions.values())
+            out: dict[str, Any] = {"sessions": len(svs), "open": 0, "actions": 0, "by_label": {}, "partial": 0,
+                                   "non_repudiable": 0, "by_source": {}, "by_user": {}, "by_rule": {}, "by_tool": {},
+                                   "arg_sources": {}, "integrity": {}, "verify_ms": [], "alerts": {}, "alert_types": {},
+                                   "prompts": {"signed": 0, "unsigned": 0}, "entries_by_kind": {}, "points": []}
+            for sv in svs:
+                summ = self.summary(sv)
+                out["open"] += 0 if summ["ended"] else 1
+                bump(out["integrity"], summ["integrity"].get("status", "unknown"))
+                if summ["integrity"].get("verify_ms") is not None:
+                    out["verify_ms"].append(summ["integrity"]["verify_ms"])
+                out["prompts"]["signed"] += summ["counts"]["prompts_signed"]
+                out["prompts"]["unsigned"] += summ["counts"]["text_unsigned"]
+                for a in sv.alerts.values():
+                    bump(out["alerts"], a["level"])
+                    bump(out["alert_types"], a["type"])
+                user = summ["user"] or "?"
+                for r in sv.records:
+                    bump(out["entries_by_kind"], r.kind)
+                    if r.kind != "tool_call":
+                        continue
+                    v = sv.verdicts.get(r.seq)
+                    if v is None:
+                        continue
+                    lab = v["label"]
+                    out["actions"] += 1
+                    bump(out["by_label"], lab)
+                    out["partial"] += int(bool(v["partial"]))
+                    out["non_repudiable"] += int(bool(v["non_repudiable"]))
+                    bump(out["by_user"], user, lab)
+                    bump(out["by_rule"], v.get("rule") or "?")
+                    tool = str(r.meta.get("tool", "?")).split("__")[-1]
+                    bump(out["by_tool"], tool, lab)
+                    if lab == "TOOL_INJECTED" and v.get("source"):
+                        bump(out["by_source"], str(v["source"]).split("(")[0])
+                    for arg, provs in (v.get("arg_provenance") or {}).items():
+                        if "#" in arg:
+                            continue
+                        cls = ("nowhere" if not provs else "user_signed" if "user_signed" in provs
+                               else "user_unsigned" if "user_unsigned" in provs
+                               else "tool" if any(p.startswith(("mcp:", "builtin:", "hosted:")) for p in provs)
+                               else "model")
+                        bump(out["arg_sources"], cls)
+                    t = epoch(r.entry.get("ts"))
+                    if t is not None:
+                        out["points"].append((t, lab))
+            # serie temporal: el ancho de cubeta se elige para que haya como mucho ~36 columnas
+            pts = sorted(out.pop("points"))
+            series: list[dict] = []
+            width = 0
+            if pts:
+                span = max(pts[-1][0] - pts[0][0], 1)
+                width = next((w for w in (10, 30, 60, 300, 900, 3600, 21600, 86400) if span / w <= 36), 86400)
+                start = pts[0][0] - pts[0][0] % width
+                buckets: dict[int, dict] = {}
+                for t, lab in pts:
+                    i = int((t - start) // width)
+                    bump(buckets.setdefault(i, {}), lab)
+                last = max(buckets)
+                for i in range(last + 1):
+                    series.append({"t": datetime.fromtimestamp(start + i * width).astimezone().isoformat(),
+                                   "counts": buckets.get(i, {})})
+            out["timeline"] = {"bucket_s": width, "series": series}
+            ms = sorted(out.pop("verify_ms"))
+            out["verify"] = ({"p50": ms[len(ms) // 2], "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))], "max": ms[-1]}
+                             if ms else None)
+        return out
+
     def health(self) -> dict[str, Any]:
         return {"ok": True, "data": str(self.data), "sessions": len(self.sessions), "no_content": self.no_content,
                 "pubkey_source": self.pubkey_source, "registry_users": sorted(self.registry.users)}

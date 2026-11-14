@@ -114,3 +114,17 @@ def test_token_required(env_sessions):
         assert c.get("/api/sessions").status_code == 401
         assert c.get("/api/sessions", headers={"authorization": "Bearer s3cret"}).status_code == 200
         assert c.get("/api/sessions?token=s3cret").status_code == 200
+
+
+def test_stats(env_sessions):
+    root, env, _ = env_sessions
+    mon, c = _client(root, env)
+    with c:
+        st = c.get("/api/stats").json()
+        assert st["sessions"] == 2 and st["actions"] >= 2
+        assert st["by_label"]["TOOL_INJECTED"] >= 1 and st["by_label"]["USER_INSTRUCTED"] >= 1
+        assert st["by_source"]["mcp:issues"] >= 1 and st["partial"] >= 1
+        assert st["by_user"]["mallory"]["USER_INSTRUCTED"] >= 1
+        assert st["arg_sources"]["tool"] >= 1 and st["arg_sources"]["user_signed"] >= 1
+        assert sum(sum(b["counts"].values()) for b in st["timeline"]["series"]) == st["actions"]
+        assert st["verify"]["p50"] >= 0
