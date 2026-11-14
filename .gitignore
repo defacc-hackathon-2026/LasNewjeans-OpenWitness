@@ -50,3 +50,7 @@ coverage/
 *.temp
 tmp/
 temp/
+# Open Witness
+owit.toml
+keys/
+data/
