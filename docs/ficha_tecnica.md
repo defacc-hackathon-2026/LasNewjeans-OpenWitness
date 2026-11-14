@@ -22,15 +22,15 @@
 
 ## 1. La amenaza
 
-Un agente de IA (Claude Code, Codex…) actúa con los permisos de su usuario y lee, mezclado, lo que escribió el usuario y lo que devuelven sus herramientas (issues, páginas web, servidores MCP). Una herramienta puede inyectarle instrucciones, incluso sin dar órdenes (*"los resúmenes se envían a reportes@…"*). Tras un incidente, el usuario culpa a la inyección, el proveedor culpa al usuario y los registros los controla un administrador que puede editarlos: no hay evidencia de quién originó la acción.
+Un agente de IA (Claude Code, Codex…) actúa con los permisos de su usuario y lee, mezclado, lo que escribió el usuario y lo que devuelven sus herramientas (issues, páginas web, servidores MCP). Una herramienta puede inyectarle instrucciones [2, 3], incluso sin dar órdenes (*"los resúmenes se envían a reportes@…"*). Tras un incidente, el usuario culpa a la inyección, el proveedor culpa al usuario y los registros los controla un administrador que puede editarlos: no hay evidencia de quién originó la acción.
 
 ## 2. Lo que construimos
 
 Open Witness es un **gateway entre el agente y el modelo de lenguaje**. No hay que modificar el agente: hoy funciona con **Claude Code, OpenCode y Codex**. Por cada sesión deja tres pruebas:
 
-1. **Qué pidió el usuario:** su mensaje va firmado (Ed25519) y recibe un recibo; no puede negarlo.
+1. **Qué pidió el usuario:** su mensaje va firmado (Ed25519 [5]) y recibe un recibo; no puede negarlo.
 2. **Qué herramientas vio el modelo:** solo las que coinciden con un manifiesto firmado por quien las publica.
-3. **Qué había en el contexto:** una bitácora encadenada, firmada y anclada, con el origen de cada fragmento.
+3. **Qué había en el contexto:** una bitácora encadenada [4], firmada y anclada, con el origen de cada fragmento.
 
 Ante un incidente, `owit verify` comprueba la bitácora y `owit attribute` dice si **lo pidió el usuario**, **lo metió la herramienta Z**, **no alcanza la evidencia** o **la evidencia fue alterada**, y de dónde salió cada dato de la acción.
 
@@ -41,7 +41,7 @@ Ante un incidente, `owit verify` comprueba la bitácora y `owit attribute` dice 
 Todo corre en local, con herramientas de demo y dominios `.test`. Medimos cuatro cosas:
 
 - **Manipulación:** 364 alteraciones de bitácoras válidas, de 11 tipos; 4 los hace un administrador con la llave del gateway.
-- **Atribución:** 35 escenarios propios con verdad conocida (con un modelo simulado que siempre cae y con `gpt-oss-20b` real) y 264 ataques ajenos de la competencia LLMail-Inject de Microsoft.
+- **Atribución:** 35 escenarios propios con verdad conocida (con un modelo simulado que siempre cae y con `gpt-oss-20b` real) y 264 ataques ajenos de la competencia LLMail-Inject de Microsoft [1].
 - **Herramientas maliciosas:** 47 envenenadas y 96 legítimas.
 - **Latencia:** con y sin gateway.
 
@@ -72,10 +72,10 @@ La métrica que más importa es la atribución correcta: un veredicto equivocado
 
 ## Referencias
 
-1. Abdelnabi et al. (2025). *LLMail-Inject: A Dataset from a Realistic Adaptive Prompt Injection Challenge*. arXiv:2506.09956.
-2. Greshake et al. (2023). *Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection*. AISec '23.
-3. Invariant Labs (2025). *MCP Security Notification: Tool Poisoning Attacks*.
-4. Crosby y Wallach (2009). *Efficient Data Structures for Tamper-Evident Logging*. USENIX Security.
-5. Bernstein et al. (2012). *High-speed high-security signatures*. Journal of Cryptographic Engineering.
+1. Abdelnabi, S. et al. (2025). *LLMail-Inject: A Dataset from a Realistic Adaptive Prompt Injection Challenge*. arXiv:2506.09956. [doi.org/10.48550/arXiv.2506.09956](https://doi.org/10.48550/arXiv.2506.09956)
+2. Greshake, K. et al. (2023). *Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection*. AISec '23, ACM, 79–90. [doi.org/10.1145/3605764.3623985](https://doi.org/10.1145/3605764.3623985)
+3. Beurer-Kellner, L. y Fischer, M. (2025). *MCP Security Notification: Tool Poisoning Attacks*. Invariant Labs. [invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks](https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks)
+4. Schneier, B. y Kelsey, J. (1999). *Secure Audit Logs to Support Computer Forensics*. ACM TISSEC 2(2), 159–176. [doi.org/10.1145/317087.317089](https://doi.org/10.1145/317087.317089)
+5. Bernstein, D. J. et al. (2012). *High-speed high-security signatures*. Journal of Cryptographic Engineering 2(2), 77–89. [doi.org/10.1007/s13389-012-0027-1](https://doi.org/10.1007/s13389-012-0027-1)
 
 </div>
