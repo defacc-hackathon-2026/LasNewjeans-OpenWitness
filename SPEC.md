@@ -2,7 +2,7 @@
 
 > Nombre: **Open Witness**. En código se escribe `openwitness`: es el nombre del paquete Python y el prefijo de las etiquetas de separación de dominio de las firmas. El comando del CLI es **`owit`**.
 >
-> Estado: **en implementación** (14 de noviembre). La especificación se validó el 13 de noviembre con un prototipo descartable en `../scratchpad/` (hallazgos en su README; resultados preliminares en §9.5). La bitácora, `verify_ledger`, el gateway Anthropic y los benchmarks §9.1 y §9.4 ya están en `src/` y `bench/`. Los ajustes al SPEC que salieron de la implementación (formatos de §6.4, comprobaciones de §7.4, contratos de §7.3, §7.5 y §7.7) quedan en el historial de git.
+> Estado: **en implementación** (14 de noviembre). La especificación se validó el 13 de noviembre con un prototipo descartable en `../scratchpad/` (hallazgos en su README; resultados preliminares en §9.5). Las ramas de los tres están integradas: bitácora, gateway, firmas, manifiestos, hooks de Claude Code (G9), atribución con juez opcional (G10) y los benchmarks §9.1–§9.4 están en `src/` y `bench/`, con los números en `results/` y la ficha en `docs/ficha_tecnica.pdf`. Los ajustes al SPEC que salieron de la implementación (formatos de §6.4, comprobaciones de §7.4, contratos de §7.3, §7.5 y §7.7) quedan en el historial de git.
 >
 > Hecho para el **Defensive Acceleration Hackathon** (14 de noviembre de 2026, Track 1). El alcance separa lo que se construye **el día del hackathon** (§2, §12) de lo que queda en el **roadmap** (§16).
 
@@ -1099,14 +1099,14 @@ Este SPEC sigue siendo la fuente de verdad: si una hoja contradice al SPEC, mand
 | Quién entrega | Qué | A quién | Para cuándo | Estado |
 |---|---|---|---|---|
 | Adrian | Repo, `pyproject.toml`, `types.py` | Todos | 9:30 | ✅ en `main` |
-| Juliana | `canonical.py` y `KeyPair` con tests | Adrian, Andres | **10:00** | 🟡 Adrian dejó una versión provisional que cumple el contrato (§7.1–7.2). Juliana la revisa, le agrega tests y queda como dueña |
+| Juliana | `canonical.py` y `KeyPair` con tests | Adrian, Andres | **10:00** | ✅ `tests/test_canonical.py` y `tests/test_identity.py`; `verify_prompt` endurecido |
 | Los tres | `types.py` y formatos de §6 revisados y congelados | Todos | **9:45** | 🟡 propuesta en `main` (§6.4 ampliada); falta el visto bueno de los tres |
 | Adrian | Fixture de una sesión real de Claude Code | Juliana (`ToolFilter`, hooks), Andres (procedencias) | 9:45 | ✅ `tests/fixtures/claude_code/2.1.323/` |
 | ~~Andres~~ | ~~2–3 bitácoras hechas a mano~~ → ya no hace falta: `bench/synthetic.py` genera bitácoras reales pasando por el gateway | — | — | ✅ |
-| Juliana | `ManifestGate.evaluate_tool(server_id, live, seen_owner)` | Adrian (gateway) | 12:30 | ⬜ el gateway ya lo usa en cuanto exista `openwitness.manifests` |
+| Juliana | `ManifestGate.evaluate_tool(server_id, live, seen_owner)` | Adrian (gateway) | 12:30 | ✅ integrado; §9.3: 47/47 bloqueados, 0 falsos positivos |
 | Adrian | Gateway que reenvía una sesión completa | Andres (bench §9.2), Juliana (hooks) | **14:00** (punto de decisión de G9) | ✅ con `fake` y con Claude Code real |
-| Andres | Escenarios y `bench/run_bench.py` estable | — (§9.1 ya no depende de esto: usa `bench/synthetic.py`) | 14:00 | ⬜ |
-| Los tres | Números congelados en `results/` | Andres (resumen y ficha) | **15:00** | 🟡 §9.1 y §9.4 preliminares en `results/` |
+| Andres | Escenarios y `bench/run_bench.py` estable | — (§9.1 ya no depende de esto: usa `bench/synthetic.py`) | 14:00 | ✅ 35 escenarios; `fake` y `gpt-oss-20b` |
+| Los tres | Números congelados en `results/` | Andres (resumen y ficha) | **15:00** | ✅ §9.1–§9.4 y G9 vueltos a correr sobre la rama integrada; `gpt-oss-20b` y el juez, de la corrida de Andres en la máquina de Adrian |
 
 **Cómo trabajar en el repo:** cada uno en su rama (`adrian/…`, `juliana/…`, `andres/…`), con merges pequeños a `main` en cada punto de control (11:00, 12:30, 14:00, 15:00). Nadie edita los módulos de otro sin avisar. `types.py` solo cambia si los tres están de acuerdo.
 
@@ -1232,7 +1232,7 @@ Encabezado: título, equipo, Track 1 y link al repositorio. Después, las seis s
 - [x] Contrato de `ManifestGate.evaluate_tool(server_id, live, seen_owner)` y `ToolFilter` sin escritura en la bitácora (§7.3).
 - [ ] Valor por defecto de `require_signed_prompts` en la demo.
 - [x] Modelo real para la demo y el benchmark sin créditos: `gpt-oss-20b` local en LM Studio. Claude solo si hay créditos.
-- [ ] Si se intenta el juez (G10) y con qué perfil (`lmstudio` es el candidato natural).
+- [x] Juez (G10): se probó con `gpt-oss-20b` en LM Studio. Reglas+juez 30/35 frente a 35/35 de las reglas solas, así que el juez queda **apagado por defecto** (`owit attribute --judge <perfil>` lo activa).
 - [x] Frecuencia de anclaje: `N = 20` entradas o `T = 30` s, y siempre al cerrar (configurable en `[gateway]` con `anchor_every` y `anchor_interval_s`).
 - [ ] Licencia del repositorio (la guía no exige ninguna).
 

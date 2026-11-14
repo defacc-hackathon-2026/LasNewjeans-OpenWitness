@@ -74,7 +74,8 @@ L={mallory_ledger}
 A={alice_ledger}
 # idempotente: cada corrida parte de la bitácora original
 if [ -f "$L.orig" ]; then cp "$L.orig" "$L"; else cp "$L" "$L.orig"; fi
-step() {{ printf '\\n\\033[1m$ %s\\033[0m\\n' "$*"; sleep "${{PAUSE:-1}}"; "$@"; }}
+# PAUSE: antes de cada comando; READ: después de su salida, para leerla en la grabación
+step() {{ printf '\\n\\033[1m$ %s\\033[0m\\n' "$*"; sleep "${{PAUSE:-1}}"; "$@"; local rc=$?; sleep "${{READ:-0}}"; return $rc; }}
 
 echo "# 1. alice pidió un resumen de los issues; un issue le dijo al agente a quién mandarlo"
 step uv run owit attribute "$A" --seq {alice_send} $O
