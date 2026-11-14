@@ -1,3 +1,4 @@
-refagent_small (352 B): +1.004 ms TTFB p50, +1.446 ms total p50 · append p50 0.262 ms · descomposición p50 0.28 ms
-claude_code_fixture (75102 B): +2.195 ms TTFB p50, +2.595 ms total p50 · append p50 0.423 ms · descomposición p50 0.598 ms
-ancla (asíncrona) p50 1.52 ms · hook p50 92.282 ms (aproximación: python + httpx + POST tool-check (sin owit hook todavía))
+refagent_small (352 B): +2.149 ms TTFB p50, +3.254 ms total p50 · append p50 0.299 ms · descomposición p50 0.316 ms
+claude_code_fixture (75102 B): +5.325 ms TTFB p50, +6.547 ms total p50 · append p50 0.753 ms · descomposición p50 1.072 ms
+ancla (asíncrona) p50 1.307 ms · hook p50 83.524 ms (owit hook pre-tool)
+máquina: {'python': '3.14.6', 'platform': 'linux', 'machine': 'x86_64', 'cpus': 4}

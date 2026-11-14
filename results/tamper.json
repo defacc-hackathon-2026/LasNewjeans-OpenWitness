@@ -1,8 +1,8 @@
 {
  "summary": {
   "in_threat_model": {
-   "trials": 364,
-   "detected": 364
+   "trials": 361,
+   "detected": 361
   },
   "sessions": 5,
   "classes": 11
@@ -56,8 +56,8 @@
   },
   "delete": {
    "label": "Borrar una entrada intermedia",
-   "trials": 38,
-   "detected": 38,
+   "trials": 37,
+   "detected": 37,
    "examples": [
     [
      "3:broken_chain",
@@ -72,8 +72,8 @@
   },
   "reorder": {
    "label": "Reordenar entradas",
-   "trials": 38,
-   "detected": 38,
+   "trials": 37,
+   "detected": 37,
    "examples": [
     [
      "3:broken_chain",
@@ -162,8 +162,8 @@
   },
   "operator_rewrite": {
    "label": "Operador con gateway_sk reescribe la cadena",
-   "trials": 34,
-   "detected": 34,
+   "trials": 32,
+   "detected": 32,
    "examples": [
     [
      "7:anchored_head_missing"
@@ -175,8 +175,8 @@
   },
   "truncate_anchored": {
    "label": "Operador trunca la cola ya anclada",
-   "trials": 36,
-   "detected": 36,
+   "trials": 37,
+   "detected": 37,
    "examples": [
     [
      "7:anchored_head_missing"

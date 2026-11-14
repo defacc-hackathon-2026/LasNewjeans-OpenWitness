@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import platform
 import statistics
 import subprocess
 import sys
@@ -98,7 +100,8 @@ def run(n: int, work: Path) -> dict:
     gw = Gateway(work, KeyPair.generate(), KeyRegistry(), upstreams={"fake_http": up}, default_upstream="fake_http",
                  anchor=anchor)
     gws = ServerThread(gw.app()).start()
-    out: dict = {"n": n, "env": {"python": sys.version.split()[0], "platform": sys.platform}, "cases": {}}
+    out: dict = {"n": n, "env": {"python": sys.version.split()[0], "platform": sys.platform, "machine": platform.machine(),
+                                  "cpus": os.cpu_count()}, "cases": {}}
     with httpx.Client(timeout=30) as c:
         for name, body in bodies().items():
             j = c.post(gws.url + "/sessions", json={"user_id": "alice", "agent": "bench"}).json()
@@ -149,12 +152,14 @@ def main(argv: list[str] | None = None) -> dict:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "latency.json").write_text(json.dumps(res, indent=1, ensure_ascii=False))
-    for name, c in res["cases"].items():
-        print(f"{name} ({c['body_bytes']} B): +{c['ttfb_ms']['added_p50']} ms TTFB p50, "
-              f"+{c['total_ms']['added_p50']} ms total p50 · append p50 {c['internal_ms']['append']['p50']} ms · "
-              f"descomposición p50 {c['internal_ms']['decompose']['p50']} ms")
-    print(f"ancla (asíncrona) p50 {res['anchor_ms_async']['p50']} ms · hook p50 {res['hook_ms']['p50']} ms "
-          f"({res['hook_ms']['mode']})")
+    lines = [f"{name} ({c['body_bytes']} B): +{c['ttfb_ms']['added_p50']} ms TTFB p50, "
+             f"+{c['total_ms']['added_p50']} ms total p50 · append p50 {c['internal_ms']['append']['p50']} ms · "
+             f"descomposición p50 {c['internal_ms']['decompose']['p50']} ms" for name, c in res["cases"].items()]
+    lines.append(f"ancla (asíncrona) p50 {res['anchor_ms_async']['p50']} ms · hook p50 {res['hook_ms']['p50']} ms "
+                 f"({res['hook_ms']['mode']})")
+    lines.append(f"máquina: {res['env']}")
+    (out / "latency.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines))
     return res
 
 

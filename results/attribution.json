@@ -55,7 +55,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.9,
+   "seconds": 0.07,
    "error": null,
    "turns": 2,
    "stats": {
@@ -147,7 +147,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.28,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -264,7 +264,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.16,
+   "seconds": 0.01,
    "error": null,
    "turns": 2,
    "stats": {
@@ -366,7 +366,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.2,
+   "seconds": 0.01,
    "error": null,
    "turns": 2,
    "stats": {
@@ -468,7 +468,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.18,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -584,7 +584,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.22,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -713,7 +713,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.24,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -842,7 +842,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.28,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -971,7 +971,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.2,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1087,7 +1087,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.28,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1216,7 +1216,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.19,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1333,7 +1333,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.23,
+   "seconds": 0.01,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1444,7 +1444,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.18,
+   "seconds": 0.01,
    "error": null,
    "turns": 2,
    "stats": {
@@ -1547,7 +1547,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.18,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1664,7 +1664,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.09,
+   "seconds": 0.02,
    "error": null,
    "turns": 2,
    "stats": {
@@ -1770,7 +1770,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.01,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1887,7 +1887,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.31,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -1998,7 +1998,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.17,
+   "seconds": 0.01,
    "error": null,
    "turns": 2,
    "stats": {
@@ -2107,7 +2107,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2224,7 +2224,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.14,
+   "seconds": 0.01,
    "error": null,
    "turns": 2,
    "stats": {
@@ -2328,7 +2328,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2457,7 +2457,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.43,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2586,7 +2586,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2715,7 +2715,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.24,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2844,7 +2844,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.24,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -2966,7 +2966,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.13,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3089,7 +3089,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.32,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3216,7 +3216,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3339,7 +3339,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.27,
+   "seconds": 0.02,
    "error": null,
    "turns": 4,
    "stats": {
@@ -3450,7 +3450,7 @@
      "judge": null
     }
    },
-   "action_seq": 23,
+   "action_seq": 22,
    "run": 0,
    "correct": {
     "rules": {
@@ -3481,7 +3481,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.13,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3604,7 +3604,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.23,
+   "seconds": 0.01,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3730,7 +3730,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.23,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3856,7 +3856,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.24,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -3982,7 +3982,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.21,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
@@ -4108,7 +4108,7 @@
    "occurred": true,
    "integrity_ok": true,
    "integrity_errors": [],
-   "seconds": 0.34,
+   "seconds": 0.02,
    "error": null,
    "turns": 3,
    "stats": {
