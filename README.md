@@ -36,6 +36,10 @@ uv run owit manifest check --server issues --tools tools.json  # ¿coincide lo q
 uv run owit hooks install claude-code --project . --yes        # hooks UserPromptSubmit, PreToolUse, SessionStart
 uv run owit exec --user alice -- claude                        # crea la sesión y lanza Claude Code por el gateway
 
+# OpenCode real a través del gateway, con el mismo firmado y bloqueo (G12); no hay nada que instalar en el proyecto
+uv run owit exec --user alice -- opencode                      # redirige el proveedor anthropic e inyecta el plugin
+uv run owit exec --user alice -- opencode run "Resume los issues abiertos"   # modo no interactivo
+
 # verificar una bitácora (las 10 comprobaciones de SPEC §7.4)
 uv run owit verify data/ledger/<sid>.jsonl [--receipts ~/.owit/receipts/]
 
@@ -76,6 +80,14 @@ Un agente se conecta creando una sesión y usando la URL base que devuelve:
 
 Los endpoints están en SPEC §7.5.
 
+**OpenCode (SPEC §17.3, G12).** `owit exec -- opencode` no escribe archivos: pasa por `OPENCODE_CONFIG_CONTENT` la
+redirección del proveedor `anthropic` y el plugin `integrations/opencode/owit-opencode-plugin/`, que reenvía el
+prompt y cada herramienta a `owit hook …`. Agrega `--standalone`, porque el servicio en segundo plano de OpenCode no
+hereda el entorno de la sesión. Dos cosas a tener en cuenta:
+- OpenCode nombra las herramientas MCP `<server>_<tool>`; el gateway las reconoce por el `server_id` del manifiesto.
+- **Declara los servidores MCP con `"codemode": false`.** Con Code Mode (el valor por defecto), OpenCode las esconde
+  detrás de su herramienta `execute` y el gateway no puede filtrarlas.
+
 ## Monitor (SPEC §17.5, G14)
 
 `owit monitor` es un proceso aparte y **de solo lectura** sobre `data/` (papel del auditor): sigue las bitácoras en
@@ -101,6 +113,7 @@ uv run python -m bench.latency --n 1000 --out results   # §9.4 latencia agregad
 uv run python -m bench.manifests --out results     # §9.3 manifiestos envenenados (corpus en bench/manifests_corpus/)
 uv run python -m bench.claude_code_probe           # Claude Code real → gateway → fake (sin API key)
 uv run python -m bench.claude_code_hooks_probe --out results   # G9: Claude Code + owit exec + hooks + manifiestos
+uv run python -m bench.opencode_probe --out results            # G12: OpenCode + owit exec + plugin + manifiestos
 uv run python -m bench.local_model --runs 5        # agente → gateway → LM Studio (gpt-oss-20b)
 uv run python -m bench.demo && bash demo/demo.sh   # demo de §13.1: atribución, verify y manipulación
 
@@ -123,6 +136,7 @@ Resultados (14 de noviembre, upstream `fake`, localhost; tabla completa en [docs
 | Manifiestos maliciosos bloqueados (6 clases) | **47/47** en `ToolFilter`, cliente MCP y gateway; `tool-check` deniega 47/47; 0 falsos positivos en 96 legítimas; firmados pero envenenados 0/5 (L5) |
 | Claude Code 2.1.323 real a través del gateway (con `fake` y con `gpt-oss-20b`) | integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
 | Claude Code 2.1.325 con `owit exec` y hooks (G9) | prompt firmado por el hook, con recibo; la herramienta MCP alterada tras firmar no llega al modelo y el hook la deniega |
+| OpenCode 2.3.0 con `owit exec` y plugin (G12) | prompt firmado por el plugin, con recibo; la herramienta MCP alterada tras firmar no llega al modelo y el plugin la deniega; integridad OK y el mismo veredicto que con Claude Code (`TOOL_INJECTED(mcp:issues)`, parcial) |
 | `gpt-oss-20b` local ante una inyección sutil | el modelo cayó 5/5; bitácora íntegra 10/10 |
 | Atribución, modelo falso (35 escenarios, 7 clases) | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; sin R2b, 30/35 |
 | Atribución, `gpt-oss-20b` (3 × 35 corridas) | acción ocurrida en 74/105; **74/74 atribuidas correctamente**; inyección sutil exitosa 12/15 |
@@ -137,7 +151,7 @@ Detalle en `results/*.txt`. Las latencias de la tabla son de un portátil (`resu
 ```
 src/openwitness/   canonical, identity, manifests, ledger, gateway, llm, refagent, attribution, integrations, cli
 bench/             benchmarks de §9 (synthetic, tamper, latency, claude_code_probe, run_bench, scenarios/)
-tests/             pruebas y fixtures (tests/fixtures/claude_code/<versión>/)
+tests/             pruebas y fixtures (tests/fixtures/claude_code/<versión>/, tests/fixtures/opencode/<versión>/)
 results/           salidas de los benchmarks
 docs/              ficha técnica, resumen, diagramas y hojas del equipo
 ```
@@ -159,7 +173,7 @@ Dependencias:
 - PyYAML (MIT)
 - Typer (MIT)
 
-Herramientas usadas en la evaluación: Claude Code 2.1.323 y 2.1.325, LM Studio, pandoc y Chromium (Playwright) para exportar la ficha.
+Herramientas usadas en la evaluación: Claude Code 2.1.321, 2.1.323 y 2.1.325, OpenCode 2.3.0, LM Studio, pandoc y Chromium (Playwright) para exportar la ficha.
 
 Trabajos y casos en que se apoya la idea: los ataques a descripciones y resultados de herramientas MCP (*tool poisoning*, *rug pull*, *shadowing*) y el caso Sentry como ejemplo de inyección por un servidor MCP. Solo se citan como motivación: no se usaron ni se atacaron servicios reales.
 
@@ -168,5 +182,6 @@ Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mal
 **Uso de asistentes de IA.** El diseño (SPEC.md) y parte del código se escribieron con ayuda de asistentes de IA, y cada módulo lo revisó su responsable (SPEC §10.4). En concreto:
 - `attribution/`, `refagent/`, `llm/naive.py`, `llm/client.py`, la ampliación de `llm/config.py`, `bench/make_scenarios.py`, `bench/run_bench.py`, `tests/test_attribution.py` y los textos de `docs/ficha/{amenaza,limites,doble_uso}.md`, `docs/resumen.md` y `docs/pitch.md` se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
 - El monitor (`src/openwitness/monitor/`, `bench/live_feed.py`, `tests/test_monitor.py`) y su interfaz (repo `monitoring-UI`) también se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
+- `manifests/`, `integrations/` (hooks, `owit exec`, Claude Code y el plugin de OpenCode), el modo por agente de `gateway/tool_filter.py`, `bench/manifests.py` y su corpus, `bench/claude_code_hooks_probe.py`, `bench/opencode_probe.py`, `tests/test_{canonical,identity,manifests,hooks,opencode}.py` y `docs/ficha/defensa.md` se escribieron con Claude Code (Claude Fable 5.2), y los revisó Juliana.
 - Los 35 escenarios (`bench/scenarios/`) también se redactaron con ayuda de IA; las inyecciones son textos de ejemplo contra herramientas de demo.
 - La integración de las ramas del equipo, `src/openwitness/entry.py` (hooks sin Typer), el paso de atribución de `bench/demo.py`, `docs/ficha_pdf.py` y la re-corrida de los benchmarks se hicieron con Claude Code.
