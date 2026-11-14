@@ -110,6 +110,8 @@ API: `GET /api/sessions`, `/api/sessions/<sid>/entries?after=<seq>`, `/api/sessi
 FALLA y sus acciones a `UNVERIFIABLE` en menos de 2 s. `uv run python -m bench.live_feed` escribe sesiones nuevas en
 un `data/` existente para verlas llegar.
 
+Clip del pitch: [`docs/monitor_pitch.mp4`](docs/monitor_pitch.mp4) (~11 s) y [`docs/monitor.mp4`](docs/monitor.mp4) (19 s): la inyección de alice y la sesión de mallory que pasa a ALTERADA y NO VERIFICABLE tras `owit tamper`. Se graba con `node bench/tools/record_monitor.mjs` (Chrome headless por CDP) y `swift bench/tools/frames_to_mp4.swift`, sin ffmpeg.
+
 ## Benchmarks (SPEC §9)
 
 ```bash

@@ -48,6 +48,8 @@ A diferencia del prototipo (donde `gpt-oss-20b` rechazó a Mallory 10/10 e ignor
 
 **Lectura honesta:** el 35/35 con el modelo falso es optimista, porque las reglas y los escenarios se escribieron juntos; la latencia es en `localhost`; el 100 % vale dentro del modelo de amenazas.
 
+![Monitor en vivo (G14): la acción de alice atribuida a `mcp:issues`, con el destinatario resaltado en el issue que lo aportó](img/monitor_accion.png){ width=58% }
+
 ## Límites
 - **Se prueba qué vio el modelo, no por qué actuó (L7):** la causa es una inferencia sobre evidencia verificada; si no alcanza, el veredicto es `AMBIGUOUS`.
 - **Solo cubre lo que pasa por el gateway (L1).** **Sin hook no hay no repudio (L8):** se atribuye igual, pero con `non_repudiable = false`.
