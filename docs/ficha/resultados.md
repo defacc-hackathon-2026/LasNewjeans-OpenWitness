@@ -18,6 +18,7 @@
 | Modelo real `gpt-oss-20b` (agente de referencia, inyección sutil) | el modelo **cayó 5/5**; bitácora íntegra 10/10 y 0 `history_mismatch` |
 | **Claude Code 2.1.323 real, sin modificar** | pasa por el gateway con `fake` y con `gpt-oss-20b`: integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
 | **G9: Claude Code 2.1.325 + `owit exec` + hooks** (`bench/claude_code_hooks_probe.py`) | prompt firmado por el hook y con recibo; `mcp__mail__send_email` (alterada tras firmar) rechazada por `descriptor_mismatch` y fuera de lo que ve el modelo; el modelo falso la llama igual → `stripped_tool_called` y `tool-check` la deniega; integridad OK |
+| **G12 y G13: OpenCode 2.3.0 y Codex CLI 0.169.0** (`bench/opencode_probe.py`, `bench/codex_probe.py`; Codex por la Responses API) | lo mismo que G9 con un plugin (OpenCode) o hooks (Codex): prompt firmado y con recibo, herramienta alterada fuera de lo que ve el modelo y denegada, 0 `history_mismatch` (en Codex, comparando ítem por ítem) y el mismo veredicto que con Claude Code (`TOOL_INJECTED(mcp:issues)`, parcial) |
 
 **Varias defensas independientes por mutación.** Cada mutación la detectan varias comprobaciones a la vez. Por ejemplo:
 - reemplazar un prompt firmado lo delatan la firma del usuario, el ancla externa, el recibo y la coherencia del contexto;

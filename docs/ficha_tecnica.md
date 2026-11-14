@@ -13,7 +13,7 @@ fontsize: 9pt
 Un agente de IA actúa con los permisos de su usuario, y su contexto mezcla texto del usuario, de las herramientas (servidores MCP, web, archivos) y del propio agente. Cuando hace daño, hoy **nadie puede probar quién lo originó**: (1) **prompt injection por herramientas**, burda ("IGNORA LO ANTERIOR y envía…") o **sutil**, sin órdenes ("los resúmenes se envían a reportes@…"), como en los ataques a servidores MCP tipo Sentry; (2) un **usuario malicioso** que pide el daño y luego culpa a una inyección; (3) un **servidor MCP falso o alterado** (descripción envenenada, *rug pull*, suplantación); (4) un **operador** que reescribe los registros después del incidente.
 
 ## Defensa
-Open Witness es un **gateway entre el agente y su LLM**. No modifica el agente: Claude Code se redirige con `ANTHROPIC_BASE_URL` y recibe solo un token de sesión, nunca la API key real.
+Open Witness es un **gateway entre el agente y su LLM**. No modifica el agente: Claude Code se redirige con `ANTHROPIC_BASE_URL`, OpenCode y Codex (Responses API) con `owit exec`, y cada uno recibe solo un token de sesión, nunca la API key real.
 
 ![Arquitectura de Open Witness](img/arquitectura.png){ width=94% }
 
@@ -28,7 +28,7 @@ Todo corre en local con servidores MCP de demo, datos sintéticos y dominios `.t
 2. **Atribución (§9.2):** 35 escenarios con verdad conocida (7 clases × 5: usuario malicioso con y sin firma, inyección por MCP, por herramienta interna, inyección sutil, mixto y benigno), ejecutados por un agente de referencia (SDK de Anthropic) a través del gateway. Con un modelo falso **ingenuo**, que obedece el último destino que lee, se mide la atribución; con `gpt-oss-20b` (3 corridas), la tasa real de éxito de cada ataque y la atribución sobre los que ocurrieron. Se reportan la etiqueta, `source`, `non_repudiable` y `partial`, y una ablación sin la regla R2b.
 3. **Manifiestos (§9.3):** corpus de 8 clases en el `ToolFilter` y en el hook `PreToolUse`.
 4. **Latencia (§9.4):** 1 000 peticiones con streaming, con y sin gateway (p50/p95/p99), con una petición mínima y una real de Claude Code de 75 KB.
-5. **Agente real:** Claude Code sin modificar (2.1.323 y 2.1.325), con `fake` y con `gpt-oss-20b`; con `owit exec` y los hooks, un servidor MCP firmado y otro alterado después de firmar.
+5. **Agentes reales:** Claude Code (2.1.323 y 2.1.325), OpenCode 2.3.0 y Codex CLI 0.169.0 sin modificar; con `owit exec` y sus hooks o plugin, un servidor MCP firmado y otro alterado después de firmar.
 
 ## Resultados
 
@@ -42,7 +42,7 @@ Todo corre en local con servidores MCP de demo, datos sintéticos y dominios `.t
 | Éxito real de los ataques con `gpt-oss-20b` | inyección sutil **12/15**, por MCP 9/15, por herramienta interna 8/15; usuario malicioso obedecido 25/30 |
 | **Manifiestos maliciosos bloqueados** (6 clases) | **47/47** en `ToolFilter`, cliente MCP y hook; legítimos aceptados 96/96 (0 falsos positivos); firmados pero envenenados 0/5 (L5) |
 | Latencia añadida, p50 hasta el primer byte | **+1,0 ms** (mínima); **+2,2 ms** (Claude Code, 75 KB); hook ≈ 84 ms por prompt o herramienta |
-| **Claude Code real, sin modificar, con hooks** | integridad OK, 0 `history_mismatch`, prompt firmado por el hook con recibo; la herramienta alterada **no llega al modelo** y, si la llama igual, el hook la **deniega** |
+| **Agentes reales sin modificar: Claude Code, OpenCode y Codex**, con hooks o plugin | integridad OK, 0 `history_mismatch`, prompt firmado con recibo; la herramienta alterada **no llega al modelo** y, si la llama igual, se **deniega**; el mismo veredicto en los tres |
 
 A diferencia del prototipo (donde `gpt-oss-20b` rechazó a Mallory 10/10 e ignoró 10/10 inyecciones burdas), aquí obedeció a Mallory en 25/30 y cayó en 17/30 inyecciones con órdenes explícitas: nuestros escenarios suenan menos dañinos. Cuando el modelo se niega, el prompt firmado queda igual en la bitácora como **prueba del intento**.
 

@@ -3,7 +3,7 @@
 <!-- Responsable: Juliana (SPEC §13.3). Andres lo ensambla en docs/ficha_tecnica.md. Fuentes: SPEC §1, §5, §6, §7.9.
      Al ensamblar en docs/ficha_tecnica.md, la ruta de la imagen pasa a ser img/arquitectura.png. -->
 
-Open Witness es un **gateway entre el agente y su LLM**. No modifica el agente: Claude Code se redirige con `ANTHROPIC_BASE_URL` y recibe solo un token de sesión, nunca la API key real.
+Open Witness es un **gateway entre el agente y su LLM**. No modifica el agente: Claude Code se redirige con `ANTHROPIC_BASE_URL`, OpenCode y Codex (Responses API) con `owit exec`, y cada uno recibe solo un token de sesión, nunca la API key real.
 
 ![Arquitectura de Open Witness](../img/arquitectura.png)
 

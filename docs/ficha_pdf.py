@@ -3,7 +3,8 @@
     uv run python docs/ficha_pdf.py [--paper A4|Letter]
 
 pandoc convierte el Markdown en HTML autocontenido (con la imagen embebida) y Chromium lo imprime a PDF con
-Playwright de Node (`npx playwright` o el que ya esté instalado). Si hay LaTeX, también sirve:
+Playwright de Node (`npx playwright` o el que ya esté instalado); si no hay Playwright, usa Chrome o Chromium en
+modo headless (`--print-to-pdf`, o la ruta en `$CHROME`). Si hay LaTeX, también sirve:
 `pandoc docs/ficha_tecnica.md -o docs/ficha_tecnica.pdf --pdf-engine=xelatex -V mainfont="DejaVu Sans"`.
 
 Al final cuenta las páginas del PDF y falla si pasa de 2 páginas o de 10 MB.
@@ -11,7 +12,9 @@ Al final cuenta las páginas del PDF y falla si pasa de 2 páginas o de 10 MB.
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -55,6 +58,34 @@ const { chromium } = require('playwright');
 """
 
 
+CHROMES = ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+           "/Applications/Chromium.app/Contents/MacOS/Chromium", "google-chrome", "chromium", "chromium-browser")
+
+
+def chrome() -> str | None:
+    for c in ([os.environ["CHROME"]] if os.environ.get("CHROME") else []) + list(CHROMES):
+        found = c if Path(c).exists() else shutil.which(c)
+        if found:
+            return found
+    return None
+
+
+def print_pdf(tmp: Path, html: Path, out: Path, paper: str) -> None:
+    """Playwright si está; si no, Chrome headless (respeta el `@page` del CSS)."""
+    js = tmp / "print.js"
+    js.write_text(PRINT_JS)
+    r = subprocess.run(["node", str(js), str(html), str(out), paper], capture_output=True, text=True)
+    if r.returncode == 0:
+        return
+    exe = chrome()
+    if exe is None:
+        sys.stderr.write(r.stderr)
+        raise SystemExit("no hay Playwright ni Chrome/Chromium para imprimir el PDF")
+    subprocess.run([exe, "--headless", "--disable-gpu", "--no-pdf-header-footer", f"--print-to-pdf={out}",
+                    f"--user-data-dir={tmp / 'chrome'}", "file://" + str(html)],
+                   check=True, capture_output=True)
+
+
 def count_pages(pdf: Path) -> int:
     # Sin dependencias: cuenta los objetos /Type /Page (no /Pages) del PDF de Chromium.
     return len(re.findall(rb"/Type\s*/Page(?!s)", pdf.read_bytes()))
@@ -72,9 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["pandoc", str(a.src), "-o", str(html), "--standalone", "--embed-resources",
                         f"--resource-path={a.src.parent}", "--css", str(css), "--metadata", "lang=es",
                         "--metadata", "pagetitle=Open Witness"], check=True)
-        js = Path(tmp) / "print.js"
-        js.write_text(PRINT_JS)
-        subprocess.run(["node", str(js), str(html), str(a.out.resolve()), a.paper], check=True)
+        print_pdf(Path(tmp), html, a.out.resolve(), a.paper)
     pages, size = count_pages(a.out), a.out.stat().st_size
     ok = pages <= MAX_PAGES and size <= MAX_BYTES
     print(f"{a.out}: {pages} páginas · {size / 1024:.0f} KB · {'OK' if ok else 'NO CUMPLE (máx. 2 páginas, 10 MB)'}")
