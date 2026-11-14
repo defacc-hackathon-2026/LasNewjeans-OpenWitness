@@ -25,7 +25,7 @@ MAX_PAGES, MAX_BYTES = 2, 10 * 1024 * 1024
 
 CSS = """
 @page { size: %(paper)s; margin: 1.15cm 1.3cm; }
-html { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 7.9pt; line-height: 1.3;
+html { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 8.5pt; line-height: 1.32;
        color: #111; }
 body { margin: 0; max-width: none; padding: 0; }
 header#title-block-header { margin: 0 0 .35em; border-bottom: 1.5px solid #333; padding-bottom: .25em; }
