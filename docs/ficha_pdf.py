@@ -1,6 +1,6 @@
 """Exporta `docs/ficha_tecnica.md` a `docs/ficha_tecnica.pdf` (SPEC §13.3: máximo 2 páginas y 10 MB).
 
-    uv run python docs/ficha_pdf.py [--paper A4|Letter]
+    uv run python docs/ficha_pdf.py [--paper Letter|A4]
 
 pandoc convierte el Markdown en HTML autocontenido (con la imagen embebida) y Chromium lo imprime a PDF con
 Playwright de Node (`npx playwright` o el que ya esté instalado); si no hay Playwright, usa Chrome o Chromium en
@@ -24,26 +24,35 @@ DOCS = Path(__file__).resolve().parent
 MAX_PAGES, MAX_BYTES = 2, 10 * 1024 * 1024
 
 CSS = """
-@page { size: %(paper)s; margin: 1.1cm 1.3cm; }
-html { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 8.2pt; line-height: 1.28;
-       color: #111; }
+/* Estilo de la plantilla DefAcc 2026: títulos con serifa, texto sin serifa, tablas claras y aire. */
+@page { size: %(paper)s; margin: 1.7cm 1.9cm; }
+html { font-family: "Helvetica Neue", "Inter", Arial, sans-serif; font-size: 9.6pt; line-height: 1.38; color: #1d1d1d; }
 body { margin: 0; max-width: none; padding: 0; }
-header#title-block-header { margin: 0 0 .35em; border-bottom: 1.5px solid #333; padding-bottom: .25em; }
-h1.title { font-size: 14pt; margin: 0; }
-p.subtitle { font-size: 8pt; margin: .1em 0 0; color: #333; }
-h2 { font-size: 10pt; margin: .55em 0 .2em; color: #1a3d6d; break-after: avoid; }
-p { margin: .25em 0; text-align: justify; hyphens: auto; }
-ol, ul { margin: .2em 0; padding-left: 1.4em; }
-li { margin: .08em 0; }
-code { font-family: "DejaVu Sans Mono", monospace; font-size: .92em; background: #f1f1f1; padding: 0 .15em;
+h1, h2 { font-family: "Iowan Old Style", Charter, Georgia, serif; font-weight: 500; color: #1d1d1d;
+         letter-spacing: -.01em; break-after: avoid; }
+h1 { font-size: 25pt; margin: .05em 0 .1em; line-height: 1.1; }
+h2 { font-size: 14pt; margin: .75em 0 .2em; }
+p.kicker { font-style: italic; font-size: 10.5pt; margin: 0; color: #333; }
+p.tagline { font-style: italic; font-size: 11pt; margin: 0 0 .5em; line-height: 1.3; }
+p { margin: .3em 0; }
+a { color: inherit; text-decoration: none; }
+ol, ul { margin: .25em 0; padding-left: 1.35em; }
+li { margin: .12em 0; }
+blockquote { margin: .4em 0; padding: .15em 0 .15em .9em; border-left: 3px solid #d6d6d6; }
+blockquote p { margin: 0; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: .88em; background: #f2f2f2; padding: 0 .2em;
        border-radius: 2px; }
-table { border-collapse: collapse; width: 100%%; margin: .3em 0; }
+table { border-collapse: collapse; width: 100%%; margin: .5em 0 .3em; font-size: .94em; }
 tr { break-inside: avoid; }
-th, td { border: .5px solid #999; padding: .12em .35em; vertical-align: top; text-align: left; }
-th { background: #e6ecf4; }
-figure { margin: .3em auto; text-align: center; break-inside: avoid; }
-figure img { max-width: 100%%; }
-figcaption { display: none; }
+th, td { border: 1px solid #e3e3df; padding: .3em .5em; vertical-align: top; text-align: left; }
+th { background: #f2f2f2; font-weight: 400; color: #555; }
+figure { margin: .35em 0 .1em; break-inside: avoid; }
+figure img { max-width: 100%%; display: block; margin: 0 auto; }
+figcaption { font-size: .9em; line-height: 1.32; margin-top: .3em; color: #333; }
+.refs { border-top: 1px solid #ddd; margin-top: .8em; }
+.refs h2 { font-size: 11pt; margin: .5em 0 .15em; }
+.refs ol { font-size: 7.6pt; line-height: 1.3; color: #444; margin: 0; }
+.refs li { margin: 0; }
 """
 
 PRINT_JS = r"""
@@ -96,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", type=Path, default=DOCS / "ficha_tecnica.md")
     ap.add_argument("--out", type=Path, default=DOCS / "ficha_tecnica.pdf")
-    ap.add_argument("--paper", default="A4", choices=["A4", "Letter"])
+    ap.add_argument("--paper", default="Letter", choices=["A4", "Letter"])   # la plantilla es Letter
     a = ap.parse_args(argv)
     with tempfile.TemporaryDirectory(prefix="owit-ficha-") as tmp:
         css, html = Path(tmp) / "ficha.css", Path(tmp) / "ficha.html"

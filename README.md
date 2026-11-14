@@ -262,7 +262,7 @@ Herramientas usadas en la evaluación: Claude Code 2.1.321, 2.1.323 y 2.1.325, O
 
 Trabajos y casos en que se apoya la idea: los ataques a descripciones y resultados de herramientas MCP (*tool poisoning*, *rug pull*, *shadowing*) y el caso Sentry como ejemplo de inyección por un servidor MCP. Solo se citan como motivación: no se usaron ni se atacaron servicios reales.
 
-Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mallory`) son sintéticos, con dominios reservados (`*.test`, `example.*`).
+Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mallory`) son sintéticos, con dominios reservados (`*.test`, `example.*`). La excepción son los correos de atacante de `bench/scenarios_llmail/`, que vienen del dataset público LLMail-Inject (MIT), con su destino reescrito a `contact.test`.
 
 **Uso de asistentes de IA.** El diseño (SPEC.md) y parte del código se escribieron con ayuda de asistentes de IA, y cada módulo lo revisó su responsable (SPEC §10.4). En concreto:
 - `attribution/`, `refagent/`, `llm/naive.py`, `llm/client.py`, la ampliación de `llm/config.py`, `bench/make_scenarios.py`, `bench/run_bench.py`, `tests/test_attribution.py` y los textos de `docs/ficha/{amenaza,limites,doble_uso}.md`, `docs/resumen.md` y `docs/pitch.md` se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
