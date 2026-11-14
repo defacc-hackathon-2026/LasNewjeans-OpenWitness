@@ -8,6 +8,7 @@
 | `GET /api/sessions/<sid>/verify` | el `IntegrityReport` (vuelve a verificar) |
 | `GET /api/sessions/<sid>/actions/<seq>` | contexto, veredicto y `arg_provenance` de un `tool_call` |
 | `GET /api/alerts[?sid=]` | alertas vigentes |
+| `GET /api/stats` | agregados de todas las sesiones (veredictos, fuentes, reglas, serie temporal…) |
 | `GET /api/events` | SSE: entradas nuevas, veredictos, alertas y resúmenes de todas las sesiones |
 
 La interfaz (repo `monitoring-UI`, React) se sirve con `--ui <dist>` o desde el servidor de Vite con proxy a `/api`.
@@ -115,6 +116,9 @@ def create_app(mon: Monitor, *, token: str | None = None, ui: Path | str | None 
     async def alerts(request: Request):
         return JSONResponse(mon.alerts(request.query_params.get("sid")))
 
+    async def stats(request: Request):
+        return JSONResponse(await asyncio.to_thread(mon.stats))
+
     async def events(request: Request):
         q: asyncio.Queue = asyncio.Queue()
         bus.queues.add(q)
@@ -142,6 +146,7 @@ def create_app(mon: Monitor, *, token: str | None = None, ui: Path | str | None 
         Route("/api/sessions/{sid}/verify", verify),
         Route("/api/sessions/{sid}/actions/{seq}", action),
         Route("/api/alerts", alerts),
+        Route("/api/stats", stats),
         Route("/api/events", events),
     ]
     if ui and Path(ui).is_dir():
