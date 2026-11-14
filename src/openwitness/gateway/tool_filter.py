@@ -13,12 +13,48 @@ Dueña: Juliana. Versión provisional (Adrian) que fija el contrato que usa el `
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Iterable, Protocol
 
 from ..manifests.signer import tool_hash   # una sola implementación de `tool_hash` (§6.3), con y sin floats
 from ..types import GateDecision, ToolDef
 from .protocols.anthropic_messages import AnthropicMessagesAdapter
+
+
+# Herramientas internas de OpenCode 2.3.0 (fixture en tests/fixtures/opencode/2.3.0/). `execute` es su Code Mode.
+OPENCODE_BUILTINS = frozenset({"edit", "glob", "grep", "question", "read", "shell", "skill", "subagent", "webfetch",
+                               "websearch", "write", "execute", "todowrite", "todoread", "task", "bash", "patch"})
+
+
+def _opencode_name(s: str) -> str:
+    """OpenCode reemplaza por `_` todo lo que no sea letra, número, `_` o `-` en el nombre del servidor."""
+    return re.sub(r"[^A-Za-z0-9_-]", "_", s)
+
+
+def resolve_origin(agent: str | None, tool_name: str, known_servers: Iterable[str] = ()) -> tuple[str, str]:
+    """`(origen, nombre original)` de una herramienta según cómo la nombra cada agente (§5.4, §17.3).
+
+    - Claude Code: `mcp__<server>__<tool>`; todo lo demás es interno.
+    - OpenCode: las MCP van como `<server>_<tool>`, sin prefijo. Se busca el servidor conocido (con manifiesto)
+      más largo que sea prefijo del nombre. Si no hay ninguno y la herramienta no es una interna de OpenCode,
+      **se trata como MCP de un servidor desconocido**, para que el gate la rechace como `unsigned` en vez de
+      dejarla pasar como interna.
+    """
+    origin, original = AnthropicMessagesAdapter.tool_origin(tool_name)
+    if origin.startswith("mcp:") or agent != "opencode":
+        return origin, original
+    best = ""
+    for server in known_servers:
+        prefix = _opencode_name(server) + "_"
+        if tool_name.startswith(prefix) and len(tool_name) > len(prefix) and len(server) > len(best):
+            best = server
+    if best:
+        return f"mcp:{best}", tool_name[len(_opencode_name(best)) + 1:]
+    if tool_name in OPENCODE_BUILTINS:
+        return origin, original
+    server, sep, rest = tool_name.partition("_")
+    return (f"mcp:{server}", rest) if sep and server and rest else (f"mcp:{tool_name}", tool_name)
 
 
 class Gate(Protocol):
@@ -38,14 +74,25 @@ class ToolState:
 
 
 class ToolFilter:
-    def __init__(self, gate: Gate | None, policy: Any):
+    def __init__(self, gate: Gate | None, policy: Any, agent: str | None = None):
         self.gate = gate
         self.policy = policy
+        self.agent = agent                    # nombre del agente de la sesión: decide cómo se leen los nombres
+
+    def _known_servers(self) -> list[str]:
+        ts = getattr(self.gate, "trust_store", None)
+        return list(getattr(ts, "manifests", {}) or {})
+
+    def origin_of(self, state: ToolState, tool_name: str) -> str:
+        """Origen de una herramienta por su nombre visible: el de su decisión, si ya se evaluó en la sesión."""
+        d = state.decisions.get(tool_name)
+        return d.origin if d is not None else resolve_origin(self.agent, tool_name, self._known_servers())[0]
 
     def evaluate(self, state: ToolState, tools: list[ToolDef]) -> list[GateDecision]:
         out = []
+        known = self._known_servers()
         for t in tools:
-            origin, original = AnthropicMessagesAdapter.tool_origin(t.name)
+            origin, original = resolve_origin(self.agent, t.name, known)
             if origin.startswith("mcp:"):
                 server = origin.removeprefix("mcp:")
                 live = ToolDef(original, t.description, t.input_schema)

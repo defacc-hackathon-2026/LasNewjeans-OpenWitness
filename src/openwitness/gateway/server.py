@@ -103,7 +103,7 @@ class Gateway:
                     "upstream": {k: v for k, v in up.describe().items() if isinstance(v, (str, int, bool))},
                     "gateway_pubkey": self.kp.public_str(), "policy": pol.to_dict()})
         self.sessions[sid] = s
-        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol), self.adapters[protocol])
+        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol, agent.get("name")), self.adapters[protocol])
         return s
 
     def add_prompt(self, s: Session, sp: dict) -> Receipt:
@@ -129,7 +129,7 @@ class Gateway:
         # Codex reporta algunas internas con otro nombre (exec_command -> "Bash"): manda el del tool_call.
         name = call.name if call is not None else tool
         d = s.tools.decisions.get(name)
-        origin, _ = self.adapters[s.protocol].tool_origin(name)
+        origin = self.decomposers[s.sid].origin_of(s, name)   # según el agente (§17.3) y el protocolo (§17.4)
         if d is not None and not d.accepted:
             res = {"decision": "deny", "reason": f"Open Witness rechazó {name}: {d.reason}"}
         elif d is None and origin.startswith("mcp:"):

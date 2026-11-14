@@ -418,7 +418,7 @@ def hook_session_start_cmd():
 
 
 @hooks_app.command("install")
-def hooks_install(agent: str = typer.Argument(..., help="claude-code o codex (opencode: G12)"),
+def hooks_install(agent: str = typer.Argument(..., help="claude-code, opencode o codex"),
                   project: Path = typer.Option(Path("."), help="proyecto donde se instalan los hooks"),
                   command: Optional[str] = typer.Option(None, help="comando owit que usarán los hooks"),
                   yes: bool = typer.Option(False, "--yes", "-y", help="escribir sin preguntar"),
@@ -429,8 +429,15 @@ def hooks_install(agent: str = typer.Argument(..., help="claude-code o codex (op
     if agent == "codex":
         _hooks_install_codex(project, command, yes, dry_run, user_config)
         return
+    if agent == "opencode":
+        from .integrations import opencode
+        typer.echo("OpenCode no necesita instalación en el proyecto: `owit exec --user <usuario> -- opencode` le pasa\n"
+                   "el plugin y la redirección al gateway en cada sesión (OPENCODE_CONFIG_CONTENT), sin escribir archivos.\n"
+                   f"Plugin: {opencode.PLUGIN_DIR}\n"
+                   "Declara tus servidores MCP con `\"codemode\": false` para que el gateway pueda filtrar sus herramientas.")
+        return
     if agent != "claude-code":
-        raise typer.BadParameter("por ahora claude-code y codex; opencode es G12")
+        raise typer.BadParameter("agentes soportados: claude-code, opencode y codex")
     import shutil
     from .integrations import claude_code
     owit = command or shutil.which("owit") or "owit"
@@ -491,6 +498,53 @@ def exec_cmd(cmd: list[str] = typer.Argument(..., help="comando del agente, desp
         typer.echo(f"owit exec: {e}", err=True)
         raise typer.Exit(2)
     raise typer.Exit(code)
+
+
+# ---------------------------------------------------------------- monitor (Andres, Fase 2 G14, §17.5)
+
+@app.command("monitor")
+def monitor_cmd(data: Path = typer.Option(DATA, help="directorio de datos del gateway (solo lectura)"),
+                registry: Path = typer.Option(Path("keys/registry.json"), help="registro de llaves de usuario"),
+                gateway_pubkey: Optional[str] = typer.Option(None, help="por defecto data/gateway.pub o la pública de gateway.key"),
+                listen: str = typer.Option("127.0.0.1:8790", help="host:puerto"),
+                token: Optional[str] = typer.Option(None, envvar="OWIT_MONITOR_TOKEN",
+                                                    help="obligatorio si se escucha fuera de 127.0.0.1"),
+                no_content: bool = typer.Option(False, "--no-content", help="solo metadatos y hashes, nunca blobs"),
+                ui: Optional[Path] = typer.Option(None, help="carpeta dist/ de monitoring-UI para servirla en /"),
+                demo: bool = typer.Option(False, "--demo", help="generar las bitácoras de bench.demo y abrirlas"),
+                live: bool = typer.Option(False, "--live", help="escribir sesiones nuevas en vivo (bench.live_feed)"),
+                live_only: Optional[str] = typer.Option(None, help="clase o id de escenario para --live"),
+                live_delay: float = typer.Option(1.5, help="segundos entre pasos de --live")):
+    """Monitor web de solo lectura: sesiones, línea de tiempo, integridad, alertas y atribución en vivo."""
+    import threading
+    import uvicorn
+    from .monitor import Monitor, create_app
+    host, _, port = listen.rpartition(":")
+    host = host or "127.0.0.1"
+    if host not in ("127.0.0.1", "localhost", "::1") and not token:
+        raise typer.BadParameter("para escuchar fuera de 127.0.0.1 hace falta --token (o OWIT_MONITOR_TOKEN)")
+    keys = registry.parent
+    if demo:
+        from bench.demo import ROOT, main as demo_main
+        demo_main()
+        data, keys = ROOT / "demo" / "data", ROOT / "demo" / "keys"
+        registry = keys / "registry.json"
+    mon = Monitor(data, registry, gateway_pubkey, no_content=no_content)
+    stop = threading.Event()
+    if live:
+        import asyncio
+        from bench.live_feed import feed
+        from bench.run_bench import load_scenarios
+        scen = load_scenarios(live_only)
+        threading.Thread(target=lambda: asyncio.run(feed(data, keys, scen, live_delay, loop=True, stop=stop)),
+                         daemon=True, name="owit-live-feed").start()
+    typer.echo(f"Open Witness monitor en http://{host}:{port} · data={data} · llave del gateway: {mon.pubkey_source}"
+               + (" · sin contenido" if no_content else "") + (f" · UI {ui}" if ui else " · API (UI con Vite)"),
+               err=True)
+    try:
+        uvicorn.run(create_app(mon, token=token, ui=ui), host=host, port=int(port), log_level="warning")
+    finally:
+        stop.set()
 
 
 def main() -> None:

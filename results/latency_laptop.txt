@@ -1,5 +1,5 @@
-refagent_small (352 B): +1.017 ms TTFB p50, +1.426 ms total p50 · append p50 0.256 ms · descomposición p50 0.27 ms
-claude_code_fixture (75102 B): +2.284 ms TTFB p50, +2.711 ms total p50 · append p50 0.42 ms · descomposición p50 0.638 ms
-codex_fixture (60503 B): +1.957 ms TTFB p50, +2.409 ms total p50 · append p50 0.394 ms · descomposición p50 0.643 ms
-ancla (asíncrona) p50 1.648 ms · hook p50 45.689 ms (owit hook pre-tool)
+refagent_small (352 B): +1.098 ms TTFB p50, +1.534 ms total p50 · append p50 0.274 ms · descomposición p50 0.289 ms
+claude_code_fixture (75102 B): +2.23 ms TTFB p50, +2.657 ms total p50 · append p50 0.449 ms · descomposición p50 0.623 ms
+codex_fixture (60503 B): +1.9 ms TTFB p50, +2.337 ms total p50 · append p50 0.385 ms · descomposición p50 0.619 ms
+ancla (asíncrona) p50 1.618 ms · hook p50 44.427 ms (owit hook pre-tool)
 máquina: {'python': '3.14.7', 'platform': 'darwin', 'machine': 'arm64', 'cpus': 14}

@@ -190,6 +190,15 @@ def main(argv: list[str] | None = None) -> dict:
         "tools_executed_by_mcp_servers": executed,
         "agent_session_recorded": (owit_home / "sessions" / f"{sid}.json").exists(),
     }
+    # atribución por reglas de cada acción (§7.9): el mismo veredicto debe salir con cualquier agente
+    from openwitness.attribution import attribute
+    result["attribution"] = []
+    for r in recs:
+        if r.kind == "tool_call":
+            v = attribute(gw.ledger_path(sid), gw.blobs, r.seq, rep, records=recs)
+            result["attribution"].append({"tool": r.meta.get("tool"), "label": v.label, "source": v.source,
+                                          "partial": v.partial, "non_repudiable": v.non_repudiable,
+                                          "arg_provenance": v.arg_provenance})
     result["ok"] = bool(
         rep.ok and result["signed_prompts"] >= 1 and result["receipts"] >= 1
         and not unsigned.get("no_hook") and not unsigned.get("no_match")

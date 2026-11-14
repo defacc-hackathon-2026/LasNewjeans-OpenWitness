@@ -189,6 +189,12 @@ class Decomposer:
             refs.append(r.hash)
         return refs
 
+    def origin_of(self, s: Session, tool_name: str) -> str:
+        """Origen de una herramienta: según el agente (`ToolFilter`, §17.3); las alojadas del protocolo
+        (`web_search` en Responses, §17.4) son `hosted:<nombre>` aunque se hayan evaluado como internas."""
+        hosted, _ = self.adapter.tool_origin(tool_name)
+        return hosted if hosted.startswith("hosted:") else self.filter.origin_of(s.tools, tool_name)
+
     # ------------------------------------------------------------------ respuesta (§6.5 paso 7)
     def on_response(self, s: Session, req_entry: LedgerRecord, resp: NormalizedResponse) -> list[LedgerRecord]:
         thread_id = req_entry.meta.get("thread_id")
@@ -202,7 +208,7 @@ class Decomposer:
         offered = set(req_entry.meta.get("tools_offered") or [])
         stripped = set(req_entry.meta.get("tools_stripped") or [])
         for tc in resp.tool_calls:
-            origin, _ = self.adapter.tool_origin(tc.name)
+            origin = self.origin_of(s, tc.name)   # según el agente (§17.3) y el protocolo (§17.4)
             d = s.tools.decisions.get(tc.name)
             meta = {"tool": tc.name, "origin": origin, "manifest_hash": d.manifest_hash if d else None,
                     "thread_id": thread_id, "tool_use_id": tc.id}
