@@ -1,0 +1,293 @@
+{
+ "class": "untrusted_key",
+ "expect": {
+  "calendar/create_event": "untrusted_key",
+  "calendar/list_events": "untrusted_key",
+  "files/list_dir": "ok",
+  "files/read_file": "ok"
+ },
+ "id": "untrusted_key_05",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "files-pub",
+    "server_id": "files",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lee un archivo del directorio de trabajo.",
+      "input_schema": {
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ],
+       "type": "object"
+      },
+      "name": "read_file",
+      "tool_hash": "sha256:bd4fffbcfc90bc131f789cc02d1f886aafd904a72eedea901e4239593498e51d"
+     },
+     {
+      "description": "Lista un directorio.",
+      "input_schema": {
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ],
+       "type": "object"
+      },
+      "name": "list_dir",
+      "tool_hash": "sha256:30ee9529500d58a945225e06a218dd7eb655d6672477755c4daf0d7393fe9922"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4=",
+   "sig": "T9+/d3bUukjnQFWHweQp51ADh1vOAjm8Sprzk9PmyXnoiTkXdv8C8Nf0sU03Yyi+xd/nN075s0/m8PQLh/EtAg=="
+  },
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "calendar-pub",
+    "server_id": "calendar",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lista los eventos de un día.",
+      "input_schema": {
+       "properties": {
+        "day": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "day"
+       ],
+       "type": "object"
+      },
+      "name": "list_events",
+      "tool_hash": "sha256:4a3e4c035174a0f6cf2d6aea6386f0c9b28a61a2dfd6f2616d10ae5368d45b77"
+     },
+     {
+      "description": "Crea un evento.",
+      "input_schema": {
+       "properties": {
+        "day": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "day",
+        "title"
+       ],
+       "type": "object"
+      },
+      "name": "create_event",
+      "tool_hash": "sha256:8332cd90fb70fdfe93562a4462ebc04930710a4245a15282a8eec63b07351777"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:8+WXxZhrCFsmks0FGN3ukxk9rFoeLD9jI6bcuye4Qq4=",
+   "sig": "vlTg8DGMr2jm6s7F9SFLI9p4ddrYt4QZQjAk2vz3VIzhPQDLn18Z0Rrhn/xcV+e2qOfxdmHnQEAWSTuG+zK8CA=="
+  }
+ ],
+ "note": "llave de confianza para otro publicador",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "files-pub",
+     "server_id": "files",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lee un archivo del directorio de trabajo.",
+       "input_schema": {
+        "properties": {
+         "path": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "path"
+        ],
+        "type": "object"
+       },
+       "name": "read_file",
+       "tool_hash": "sha256:bd4fffbcfc90bc131f789cc02d1f886aafd904a72eedea901e4239593498e51d"
+      },
+      {
+       "description": "Lista un directorio.",
+       "input_schema": {
+        "properties": {
+         "path": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "path"
+        ],
+        "type": "object"
+       },
+       "name": "list_dir",
+       "tool_hash": "sha256:30ee9529500d58a945225e06a218dd7eb655d6672477755c4daf0d7393fe9922"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4=",
+    "sig": "T9+/d3bUukjnQFWHweQp51ADh1vOAjm8Sprzk9PmyXnoiTkXdv8C8Nf0sU03Yyi+xd/nN075s0/m8PQLh/EtAg=="
+   },
+   "server_id": "files",
+   "tools": [
+    {
+     "description": "Lee un archivo del directorio de trabajo.",
+     "input_schema": {
+      "properties": {
+       "path": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "path"
+      ],
+      "type": "object"
+     },
+     "name": "read_file"
+    },
+    {
+     "description": "Lista un directorio.",
+     "input_schema": {
+      "properties": {
+       "path": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "path"
+      ],
+      "type": "object"
+     },
+     "name": "list_dir"
+    }
+   ]
+  },
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "calendar-pub",
+     "server_id": "calendar",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lista los eventos de un día.",
+       "input_schema": {
+        "properties": {
+         "day": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "day"
+        ],
+        "type": "object"
+       },
+       "name": "list_events",
+       "tool_hash": "sha256:4a3e4c035174a0f6cf2d6aea6386f0c9b28a61a2dfd6f2616d10ae5368d45b77"
+      },
+      {
+       "description": "Crea un evento.",
+       "input_schema": {
+        "properties": {
+         "day": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "day",
+         "title"
+        ],
+        "type": "object"
+       },
+       "name": "create_event",
+       "tool_hash": "sha256:8332cd90fb70fdfe93562a4462ebc04930710a4245a15282a8eec63b07351777"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:8+WXxZhrCFsmks0FGN3ukxk9rFoeLD9jI6bcuye4Qq4=",
+    "sig": "vlTg8DGMr2jm6s7F9SFLI9p4ddrYt4QZQjAk2vz3VIzhPQDLn18Z0Rrhn/xcV+e2qOfxdmHnQEAWSTuG+zK8CA=="
+   },
+   "server_id": "calendar",
+   "tools": [
+    {
+     "description": "Lista los eventos de un día.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day"
+      ],
+      "type": "object"
+     },
+     "name": "list_events"
+    },
+    {
+     "description": "Crea un evento.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day",
+       "title"
+      ],
+      "type": "object"
+     },
+     "name": "create_event"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "calendar/list_events",
+  "calendar/create_event"
+ ],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "files-pub": [
+    "ed25519:+/gGcMz4hawCVWFXNPc6eEGMjcGxs3ZUma3ySdOMNo4="
+   ],
+   "otro-pub": [
+    "ed25519:8+WXxZhrCFsmks0FGN3ukxk9rFoeLD9jI6bcuye4Qq4="
+   ]
+  }
+ }
+}

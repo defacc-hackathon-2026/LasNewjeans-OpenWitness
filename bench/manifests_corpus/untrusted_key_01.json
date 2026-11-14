@@ -1,0 +1,233 @@
+{
+ "class": "untrusted_key",
+ "expect": {
+  "http_fetch/fetch": "ok",
+  "issues/get_issue": "untrusted_key",
+  "issues/list_issues": "untrusted_key"
+ },
+ "id": "untrusted_key_01",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "http_fetch-pub",
+    "server_id": "http_fetch",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Descarga una URL del servidor local de fixtures.",
+      "input_schema": {
+       "properties": {
+        "url": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "url"
+       ],
+       "type": "object"
+      },
+      "name": "fetch",
+      "tool_hash": "sha256:9645a8e2e505a54eb782f3dc9c2995e7754d9221809b585595f5b7a9deec0a5b"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY=",
+   "sig": "xzv/3e5Qcvw1VIm/jOoWmhQFB+ZvzwxFNeZPudzKHaHt2/MCutgunPvvgm37mGTTOL0gsKskXSIDp9A1gTIIDg=="
+  },
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "issues-pub",
+    "server_id": "issues",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lista los issues abiertos de un proyecto.",
+      "input_schema": {
+       "properties": {
+        "project": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "project"
+       ],
+       "type": "object"
+      },
+      "name": "list_issues",
+      "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+     },
+     {
+      "description": "Devuelve el detalle de un issue.",
+      "input_schema": {
+       "properties": {
+        "id": {
+         "type": "integer"
+        }
+       },
+       "required": [
+        "id"
+       ],
+       "type": "object"
+      },
+      "name": "get_issue",
+      "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:nj5PLmbiqrDBCc0xAj2A047+gWxhBklwWqoynNeYboA=",
+   "sig": "jCiJykLYj04JaoKWNHQV39cvPBrheaee51Cm+vvmWcC+U2Owg2etytmCrmRYbIwkbfrp9wZB7qCXnAe773oEAQ=="
+  }
+ ],
+ "note": "llave desconocida que dice ser el publicador legítimo",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "http_fetch-pub",
+     "server_id": "http_fetch",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Descarga una URL del servidor local de fixtures.",
+       "input_schema": {
+        "properties": {
+         "url": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "url"
+        ],
+        "type": "object"
+       },
+       "name": "fetch",
+       "tool_hash": "sha256:9645a8e2e505a54eb782f3dc9c2995e7754d9221809b585595f5b7a9deec0a5b"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY=",
+    "sig": "xzv/3e5Qcvw1VIm/jOoWmhQFB+ZvzwxFNeZPudzKHaHt2/MCutgunPvvgm37mGTTOL0gsKskXSIDp9A1gTIIDg=="
+   },
+   "server_id": "http_fetch",
+   "tools": [
+    {
+     "description": "Descarga una URL del servidor local de fixtures.",
+     "input_schema": {
+      "properties": {
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "url"
+      ],
+      "type": "object"
+     },
+     "name": "fetch"
+    }
+   ]
+  },
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "issues-pub",
+     "server_id": "issues",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lista los issues abiertos de un proyecto.",
+       "input_schema": {
+        "properties": {
+         "project": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "project"
+        ],
+        "type": "object"
+       },
+       "name": "list_issues",
+       "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+      },
+      {
+       "description": "Devuelve el detalle de un issue.",
+       "input_schema": {
+        "properties": {
+         "id": {
+          "type": "integer"
+         }
+        },
+        "required": [
+         "id"
+        ],
+        "type": "object"
+       },
+       "name": "get_issue",
+       "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:nj5PLmbiqrDBCc0xAj2A047+gWxhBklwWqoynNeYboA=",
+    "sig": "jCiJykLYj04JaoKWNHQV39cvPBrheaee51Cm+vvmWcC+U2Owg2etytmCrmRYbIwkbfrp9wZB7qCXnAe773oEAQ=="
+   },
+   "server_id": "issues",
+   "tools": [
+    {
+     "description": "Lista los issues abiertos de un proyecto.",
+     "input_schema": {
+      "properties": {
+       "project": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "project"
+      ],
+      "type": "object"
+     },
+     "name": "list_issues"
+    },
+    {
+     "description": "Devuelve el detalle de un issue.",
+     "input_schema": {
+      "properties": {
+       "id": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "id"
+      ],
+      "type": "object"
+     },
+     "name": "get_issue"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "issues/list_issues",
+  "issues/get_issue"
+ ],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "http_fetch-pub": [
+    "ed25519:/eneJYSwXlKSFpCNQOhzMjqHsQPP6VlMQEHCBuz9PXY="
+   ],
+   "issues-pub": [
+    "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo="
+   ]
+  }
+ }
+}

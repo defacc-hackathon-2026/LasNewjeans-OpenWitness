@@ -396,6 +396,36 @@ async def test_altered_tool_is_stripped_and_tool_check_denies(tmp_path):
     assert rep.ok, [e.to_dict() for e in rep.errors]
 
 
+# ---------------------------------------------------------------- corpus y bench de §9.3
+
+def test_corpus_on_disk_is_the_generated_one():
+    from bench.manifests import CLASSES, build_corpus, load_corpus
+    built, on_disk = build_corpus(), load_corpus()
+    assert sorted(c["id"] for c in on_disk) == sorted(c["id"] for c in built)
+    assert {c["id"]: c for c in on_disk} == {c["id"]: c for c in built}      # `--regen` no cambia nada
+    per_class = {cls: sum(c["class"] == cls for c in built) for cls in CLASSES}
+    assert len(CLASSES) == 8 and all(n == 5 for n in per_class.values()), per_class
+    assert "evil.test" in json.dumps(built) and "@gmail" not in json.dumps(built)   # solo dominios reservados
+
+
+def test_bench_blocks_every_malicious_class_without_false_positives(tmp_path):
+    from bench.manifests import L5, load_corpus, run
+    res = run(load_corpus(), tmp_path)
+    s = res["summary"]
+    assert s["malicious_classes"] == 6 and s["malicious_tools"] > 0
+    for point in ("tool_filter", "mcp_client", "gateway"):
+        assert s["blocked"][point] == s["malicious_tools"], point
+        assert s["false_positives"][point] == 0, point
+    assert s["hook_denied"] == s["malicious_tools"] and s["legit_hook_allowed"] == s["legit_tools"]
+    assert s["builtin_accepted"] == s["builtin_tools"]
+    assert s["reasons_matching"] == s["reasons_total"]
+    for cls, row in res["by_class"].items():
+        if cls not in ("legit", L5):
+            assert row["targets"] >= 5 and row["blocked"]["tool_filter"] == row["targets"], cls
+    # L5: lo firmado por un publicador confiable pasa aunque esté envenenado; se reporta aparte
+    assert s["l5_poisoned_signed"] == {"tools": 5, "blocked": {"tool_filter": 0, "mcp_client": 0, "gateway": 0}}
+
+
 # ---------------------------------------------------------------- CLI: owit keygen y owit manifest
 
 def test_cli_keygen_and_manifest_sign(tmp_path):

@@ -179,6 +179,14 @@ def bench_latency(out: Path = typer.Option(Path("results")), n: int = 1000):
     main(["--out", str(out), "--n", str(n)])
 
 
+@bench_app.command("manifests")
+def bench_manifests(out: Path = typer.Option(Path("results")),
+                    regen: bool = typer.Option(False, "--regen", help="regenerar bench/manifests_corpus/")):
+    """§9.3: manifiestos envenenados bloqueados."""
+    from bench.manifests import main
+    main(["--out", str(out)] + (["--regen"] if regen else []))
+
+
 @llm_app.command("list")
 def llm_list(config: Path = typer.Option(Path("owit.toml"))):
     from .llm.config import load_profiles, redact_headers

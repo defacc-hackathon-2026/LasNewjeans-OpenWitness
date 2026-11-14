@@ -1,0 +1,79 @@
+{
+ "class": "legit",
+ "expect": {
+  "ml/score": "ok"
+ },
+ "id": "legit_05",
+ "malicious": false,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "ml-pub",
+    "server_id": "ml",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Puntúa un texto.",
+      "input_schema_json": "{\"properties\":{\"threshold\":{\"maximum\":1.0,\"minimum\":0.5,\"type\":\"number\"}},\"type\":\"object\"}",
+      "name": "score",
+      "tool_hash": "sha256:b0b9311192710b1f38002d6295a2fb53ddbf4b639a7e98224e0f8146ee4db77e"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:YG8J/VkIzfjIQlWXm4Y5Qp+T+PCHzyy3zdO8ZuQncs8=",
+   "sig": "cuAqwI4yqUejKzrjs3Ex28Bw9aAo+EJwIdHTL8Fbbndu5W3ybZ3r0ZEnYHIZHTqAAUY9jCpk/EHj+J50o4DeCg=="
+  }
+ ],
+ "note": "esquema con floats",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "ml-pub",
+     "server_id": "ml",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Puntúa un texto.",
+       "input_schema_json": "{\"properties\":{\"threshold\":{\"maximum\":1.0,\"minimum\":0.5,\"type\":\"number\"}},\"type\":\"object\"}",
+       "name": "score",
+       "tool_hash": "sha256:b0b9311192710b1f38002d6295a2fb53ddbf4b639a7e98224e0f8146ee4db77e"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:YG8J/VkIzfjIQlWXm4Y5Qp+T+PCHzyy3zdO8ZuQncs8=",
+    "sig": "cuAqwI4yqUejKzrjs3Ex28Bw9aAo+EJwIdHTL8Fbbndu5W3ybZ3r0ZEnYHIZHTqAAUY9jCpk/EHj+J50o4DeCg=="
+   },
+   "server_id": "ml",
+   "tools": [
+    {
+     "description": "Puntúa un texto.",
+     "input_schema": {
+      "properties": {
+       "threshold": {
+        "maximum": 1.0,
+        "minimum": 0.5,
+        "type": "number"
+       }
+      },
+      "type": "object"
+     },
+     "name": "score"
+    }
+   ]
+  }
+ ],
+ "targets": [],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "ml-pub": [
+    "ed25519:YG8J/VkIzfjIQlWXm4Y5Qp+T+PCHzyy3zdO8ZuQncs8="
+   ]
+  }
+ }
+}
