@@ -350,16 +350,19 @@ class Monitor:
                 "verdicts": labels, "alerts": alerts, "integrity": self.badge(sv), "reloads": sv.reloads}
 
     def entry_view(self, sv: SessionView, r: LedgerRecord) -> dict:
-        frag = None
+        frag, args = None, None
         if not self.no_content and r.payload_hash and r.kind not in ("llm_request", "session_start", "anchor",
                                                                      "manifest_decision"):
             payload = self.blobs.get_obj(r.payload_hash)
             if payload is not None:
                 frag = excerpt(entry_text(r, payload), [])
+                if r.kind == "tool_call":
+                    args = {k: (v[:160] + "…" if isinstance(v, str) and len(v) > 160 else v)
+                            for k, v in (payload.get("args") or {}).items()}
         status = sv.report.blob_status.get(r.seq) if sv.report else None
         return {"seq": r.seq, "ts": r.entry.get("ts"), "kind": r.kind, "actor": r.entry.get("actor"),
                 "provenance": color_of(r), "hash": r.hash, "payload_hash": r.payload_hash, "blob": status,
-                "summary": summary_of(r), "fragment": frag, "meta": safe_meta(r.meta),
+                "summary": summary_of(r), "fragment": frag, "args": args, "meta": safe_meta(r.meta),
                 "verdict": sv.verdicts.get(r.seq)}
 
     # ------------------------------------------------------------------ API
