@@ -25,7 +25,7 @@ MAX_PAGES, MAX_BYTES = 2, 10 * 1024 * 1024
 
 CSS = """
 @page { size: %(paper)s; margin: 1.15cm 1.3cm; }
-html { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 8.5pt; line-height: 1.32;
+html { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 8.2pt; line-height: 1.3;
        color: #111; }
 body { margin: 0; max-width: none; padding: 0; }
 header#title-block-header { margin: 0 0 .35em; border-bottom: 1.5px solid #333; padding-bottom: .25em; }
@@ -37,7 +37,8 @@ ol, ul { margin: .2em 0; padding-left: 1.4em; }
 li { margin: .08em 0; }
 code { font-family: "DejaVu Sans Mono", monospace; font-size: .92em; background: #f1f1f1; padding: 0 .15em;
        border-radius: 2px; }
-table { border-collapse: collapse; width: 100%%; margin: .3em 0; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%%; margin: .3em 0; }
+tr { break-inside: avoid; }
 th, td { border: .5px solid #999; padding: .12em .35em; vertical-align: top; text-align: left; }
 th { background: #e6ecf4; }
 figure { margin: .3em auto; text-align: center; break-inside: avoid; }
