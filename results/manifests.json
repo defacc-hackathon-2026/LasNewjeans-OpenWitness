@@ -1,0 +1,2645 @@
+{
+ "summary": {
+  "cases": 40,
+  "malicious_classes": 6,
+  "malicious_tools": 47,
+  "blocked": {
+   "tool_filter": 47,
+   "mcp_client": 47,
+   "gateway": 47
+  },
+  "hook_denied": 47,
+  "legit_tools": 96,
+  "legit_accepted": {
+   "tool_filter": 96,
+   "mcp_client": 96,
+   "gateway": 96
+  },
+  "false_positives": {
+   "tool_filter": 0,
+   "mcp_client": 0,
+   "gateway": 0
+  },
+  "legit_hook_allowed": 96,
+  "builtin_tools": 840,
+  "builtin_accepted": 840,
+  "reasons_matching": 296,
+  "reasons_total": 296,
+  "l5_poisoned_signed": {
+   "tools": 5,
+   "blocked": {
+    "tool_filter": 0,
+    "mcp_client": 0,
+    "gateway": 0
+   }
+  }
+ },
+ "by_class": {
+  "legit": {
+   "label": "Legítimos firmados (deben aceptarse)",
+   "cases": 5,
+   "targets": 0,
+   "blocked": {
+    "tool_filter": 0,
+    "mcp_client": 0,
+    "gateway": 0
+   },
+   "hook_denied": 0,
+   "reason_ok": 38,
+   "reason_total": 38
+  },
+  "unsigned": {
+   "label": "Sin firma",
+   "cases": 5,
+   "targets": 9,
+   "blocked": {
+    "tool_filter": 9,
+    "mcp_client": 9,
+    "gateway": 9
+   },
+   "hook_denied": 9,
+   "reason_ok": 36,
+   "reason_total": 36
+  },
+  "bad_sig": {
+   "label": "Firma inválida",
+   "cases": 5,
+   "targets": 9,
+   "blocked": {
+    "tool_filter": 9,
+    "mcp_client": 9,
+    "gateway": 9
+   },
+   "hook_denied": 9,
+   "reason_ok": 36,
+   "reason_total": 36
+  },
+  "untrusted_key": {
+   "label": "Llave fuera del trust store",
+   "cases": 5,
+   "targets": 9,
+   "blocked": {
+    "tool_filter": 9,
+    "mcp_client": 9,
+    "gateway": 9
+   },
+   "hook_denied": 9,
+   "reason_ok": 36,
+   "reason_total": 36
+  },
+  "descriptor_mismatch": {
+   "label": "Descripción o esquema modificados tras firmar",
+   "cases": 5,
+   "targets": 5,
+   "blocked": {
+    "tool_filter": 5,
+    "mcp_client": 5,
+    "gateway": 5
+   },
+   "hook_denied": 5,
+   "reason_ok": 38,
+   "reason_total": 38
+  },
+  "rug_pull": {
+   "label": "Rug pull: versión nueva firmada con otra llave",
+   "cases": 5,
+   "targets": 10,
+   "blocked": {
+    "tool_filter": 10,
+    "mcp_client": 10,
+    "gateway": 10
+   },
+   "hook_denied": 10,
+   "reason_ok": 38,
+   "reason_total": 38
+  },
+  "shadowing": {
+   "label": "Tool shadowing: nombre de otro servidor",
+   "cases": 5,
+   "targets": 5,
+   "blocked": {
+    "tool_filter": 5,
+    "mcp_client": 5,
+    "gateway": 5
+   },
+   "hook_denied": 5,
+   "reason_ok": 38,
+   "reason_total": 38
+  },
+  "poisoned_signed": {
+   "label": "Firmado por publicador confiable pero envenenado (L5)",
+   "cases": 5,
+   "targets": 5,
+   "blocked": {
+    "tool_filter": 0,
+    "mcp_client": 0,
+    "gateway": 0
+   },
+   "hook_denied": 0,
+   "reason_ok": 36,
+   "reason_total": 36
+  }
+ },
+ "cases": [
+  {
+   "id": "bad_sig_01",
+   "class": "bad_sig",
+   "note": "descripción cambiada dentro del manifiesto sin volver a firmar",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "bad_sig_02",
+   "class": "bad_sig",
+   "note": "firma corrupta",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/send_email": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "bad_sig_03",
+   "class": "bad_sig",
+   "note": "firma hecha con la etiqueta de prompts",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/list_dir": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/read_file": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "bad_sig_04",
+   "class": "bad_sig",
+   "note": "publicador cambiado tras firmar",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "bad_sig_05",
+   "class": "bad_sig",
+   "note": "cuerpo editado tras firmar",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "bad_sig",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "bad_sig"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "descriptor_mismatch_01",
+   "class": "descriptor_mismatch",
+   "note": "instrucción inyectada en la descripción",
+   "tools": {
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "descriptor_mismatch",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "descriptor_mismatch_02",
+   "class": "descriptor_mismatch",
+   "note": "parámetro agregado al esquema",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "descriptor_mismatch",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "descriptor_mismatch_03",
+   "class": "descriptor_mismatch",
+   "note": "herramienta que no estaba en el manifiesto",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/run_shell": {
+     "expected": "descriptor_mismatch",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "descriptor_mismatch_04",
+   "class": "descriptor_mismatch",
+   "note": "cambio de un solo carácter (homoglifo)",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "descriptor_mismatch",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "descriptor_mismatch_05",
+   "class": "descriptor_mismatch",
+   "note": "campos obligatorios relajados",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "descriptor_mismatch",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "descriptor_mismatch"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "legit_01",
+   "class": "legit",
+   "note": "un servidor firmado por su publicador",
+   "tools": {
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "legit_02",
+   "class": "legit",
+   "note": "dos servidores",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "legit_03",
+   "class": "legit",
+   "note": "los cinco servidores de demo",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "legit_04",
+   "class": "legit",
+   "note": "versión nueva firmada por la misma llave que el pin",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/delete_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "legit_05",
+   "class": "legit",
+   "note": "esquema con floats",
+   "tools": {
+    "ml/score": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "poisoned_signed_01",
+   "class": "poisoned_signed",
+   "note": "el publicador confiable firmó una descripción envenenada",
+   "tools": {
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "poisoned_signed_02",
+   "class": "poisoned_signed",
+   "note": "el publicador confiable firmó una descripción envenenada",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "poisoned_signed_03",
+   "class": "poisoned_signed",
+   "note": "el publicador confiable firmó una descripción envenenada",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "poisoned_signed_04",
+   "class": "poisoned_signed",
+   "note": "el publicador confiable firmó una descripción envenenada",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "poisoned_signed_05",
+   "class": "poisoned_signed",
+   "note": "el publicador confiable firmó una descripción envenenada",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "rug_pull_01",
+   "class": "rug_pull",
+   "note": "versión nueva firmada con otra llave, que el publicador ya agregó como de confianza",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "rug_pull_02",
+   "class": "rug_pull",
+   "note": "versión nueva firmada con otra llave, con una herramienta nueva",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/export_all": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/send_email": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "rug_pull_03",
+   "class": "rug_pull",
+   "note": "versión nueva firmada con otra llave",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/list_dir": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/read_file": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "rug_pull_04",
+   "class": "rug_pull",
+   "note": "versión nueva firmada con otra llave, que el publicador ya agregó como de confianza, con la descripción envenenada",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "rug_pull_05",
+   "class": "rug_pull",
+   "note": "versión nueva firmada con otra llave, con la descripción envenenada",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "rug_pull",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "rug_pull"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "shadowing_01",
+   "class": "shadowing",
+   "note": "issues-helper anuncia `list_issues`, que ya es de issues",
+   "tools": {
+    "issues-helper/helper_status": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues-helper/list_issues": {
+     "expected": "shadowing",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "shadowing_02",
+   "class": "shadowing",
+   "note": "mail-helper anuncia `send_email`, que ya es de mail",
+   "tools": {
+    "mail-helper/helper_status": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail-helper/send_email": {
+     "expected": "shadowing",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "shadowing_03",
+   "class": "shadowing",
+   "note": "files-helper anuncia `read_file`, que ya es de files",
+   "tools": {
+    "files-helper/helper_status": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files-helper/read_file": {
+     "expected": "shadowing",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "shadowing_04",
+   "class": "shadowing",
+   "note": "http_fetch-helper anuncia `fetch`, que ya es de http_fetch",
+   "tools": {
+    "http_fetch-helper/fetch": {
+     "expected": "shadowing",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "http_fetch-helper/helper_status": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "shadowing_05",
+   "class": "shadowing",
+   "note": "calendar-helper anuncia `list_events`, que ya es de calendar",
+   "tools": {
+    "calendar-helper/helper_status": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar-helper/list_events": {
+     "expected": "shadowing",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "shadowing"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "unsigned_01",
+   "class": "unsigned",
+   "note": "issues no tiene manifiesto",
+   "tools": {
+    "issues/get_issue": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "unsigned_02",
+   "class": "unsigned",
+   "note": "mail no tiene manifiesto",
+   "tools": {
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/send_email": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "unsigned_03",
+   "class": "unsigned",
+   "note": "files no tiene manifiesto",
+   "tools": {
+    "files/list_dir": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/read_file": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "unsigned_04",
+   "class": "unsigned",
+   "note": "http_fetch no tiene manifiesto",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "http_fetch/fetch": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "unsigned_05",
+   "class": "unsigned",
+   "note": "calendar no tiene manifiesto",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "unsigned",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "unsigned"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "untrusted_key_01",
+   "class": "untrusted_key",
+   "note": "llave desconocida que dice ser el publicador legítimo",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "untrusted_key_02",
+   "class": "untrusted_key",
+   "note": "llave de confianza para otro publicador",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/send_email": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    }
+   }
+  },
+  {
+   "id": "untrusted_key_03",
+   "class": "untrusted_key",
+   "note": "publicador que nadie agregó al trust store",
+   "tools": {
+    "files/list_dir": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/read_file": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "issues/get_issue": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "issues/list_issues": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "untrusted_key_04",
+   "class": "untrusted_key",
+   "note": "llave desconocida que dice ser el publicador legítimo",
+   "tools": {
+    "http_fetch/fetch": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "mail/list_inbox": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "mail/send_email": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  },
+  {
+   "id": "untrusted_key_05",
+   "class": "untrusted_key",
+   "note": "llave de confianza para otro publicador",
+   "tools": {
+    "calendar/create_event": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "calendar/list_events": {
+     "expected": "untrusted_key",
+     "tool_filter": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "mcp_client": {
+      "accepted": false,
+      "reason": "untrusted_key"
+     },
+     "gateway": {
+      "accepted": false,
+      "hook": "deny"
+     }
+    },
+    "files/list_dir": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    },
+    "files/read_file": {
+     "expected": "ok",
+     "tool_filter": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "mcp_client": {
+      "accepted": true,
+      "reason": "ok"
+     },
+     "gateway": {
+      "accepted": true,
+      "hook": "allow"
+     }
+    }
+   }
+  }
+ ]
+}

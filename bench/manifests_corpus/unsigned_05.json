@@ -1,0 +1,196 @@
+{
+ "class": "unsigned",
+ "expect": {
+  "calendar/create_event": "unsigned",
+  "calendar/list_events": "unsigned",
+  "issues/get_issue": "ok",
+  "issues/list_issues": "ok"
+ },
+ "id": "unsigned_05",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "issues-pub",
+    "server_id": "issues",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lista los issues abiertos de un proyecto.",
+      "input_schema": {
+       "properties": {
+        "project": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "project"
+       ],
+       "type": "object"
+      },
+      "name": "list_issues",
+      "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+     },
+     {
+      "description": "Devuelve el detalle de un issue.",
+      "input_schema": {
+       "properties": {
+        "id": {
+         "type": "integer"
+        }
+       },
+       "required": [
+        "id"
+       ],
+       "type": "object"
+      },
+      "name": "get_issue",
+      "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo=",
+   "sig": "GPH6FB08l51Ni1WYFtLI7hGXnKNJ9/a9HTtU5/JzadnjWfjpI9qHFyW61BwmRCVSYGU/8JUPsqOyWHJqY/a5Bg=="
+  }
+ ],
+ "note": "calendar no tiene manifiesto",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "issues-pub",
+     "server_id": "issues",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lista los issues abiertos de un proyecto.",
+       "input_schema": {
+        "properties": {
+         "project": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "project"
+        ],
+        "type": "object"
+       },
+       "name": "list_issues",
+       "tool_hash": "sha256:801f5132cb2de1cb695ec5d67e8c33d689673f41848a30bf3f5c4032676523bf"
+      },
+      {
+       "description": "Devuelve el detalle de un issue.",
+       "input_schema": {
+        "properties": {
+         "id": {
+          "type": "integer"
+         }
+        },
+        "required": [
+         "id"
+        ],
+        "type": "object"
+       },
+       "name": "get_issue",
+       "tool_hash": "sha256:5c894ec0a3cdc4bda494536674ac77e93466c6157fc5855314b3d37e98e6f9b4"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo=",
+    "sig": "GPH6FB08l51Ni1WYFtLI7hGXnKNJ9/a9HTtU5/JzadnjWfjpI9qHFyW61BwmRCVSYGU/8JUPsqOyWHJqY/a5Bg=="
+   },
+   "server_id": "issues",
+   "tools": [
+    {
+     "description": "Lista los issues abiertos de un proyecto.",
+     "input_schema": {
+      "properties": {
+       "project": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "project"
+      ],
+      "type": "object"
+     },
+     "name": "list_issues"
+    },
+    {
+     "description": "Devuelve el detalle de un issue.",
+     "input_schema": {
+      "properties": {
+       "id": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "id"
+      ],
+      "type": "object"
+     },
+     "name": "get_issue"
+    }
+   ]
+  },
+  {
+   "presented": null,
+   "server_id": "calendar",
+   "tools": [
+    {
+     "description": "Lista los eventos de un día.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day"
+      ],
+      "type": "object"
+     },
+     "name": "list_events"
+    },
+    {
+     "description": "Crea un evento.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day",
+       "title"
+      ],
+      "type": "object"
+     },
+     "name": "create_event"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "calendar/list_events",
+  "calendar/create_event"
+ ],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "calendar-pub": [
+    "ed25519:DU/hOkbHfB98cUFZcC+FwyAVFpZJS3HpKI5XVh32Ye0="
+   ],
+   "issues-pub": [
+    "ed25519:KZQktMGluswRnTq5EL5xWXloScrIohckJwxtTvj8HOo="
+   ]
+  }
+ }
+}

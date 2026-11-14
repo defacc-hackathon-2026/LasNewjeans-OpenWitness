@@ -1,0 +1,287 @@
+{
+ "class": "untrusted_key",
+ "expect": {
+  "calendar/create_event": "ok",
+  "calendar/list_events": "ok",
+  "mail/list_inbox": "untrusted_key",
+  "mail/send_email": "untrusted_key"
+ },
+ "id": "untrusted_key_02",
+ "malicious": true,
+ "manifests": [
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "calendar-pub",
+    "server_id": "calendar",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Lista los eventos de un día.",
+      "input_schema": {
+       "properties": {
+        "day": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "day"
+       ],
+       "type": "object"
+      },
+      "name": "list_events",
+      "tool_hash": "sha256:4a3e4c035174a0f6cf2d6aea6386f0c9b28a61a2dfd6f2616d10ae5368d45b77"
+     },
+     {
+      "description": "Crea un evento.",
+      "input_schema": {
+       "properties": {
+        "day": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "day",
+        "title"
+       ],
+       "type": "object"
+      },
+      "name": "create_event",
+      "tool_hash": "sha256:8332cd90fb70fdfe93562a4462ebc04930710a4245a15282a8eec63b07351777"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:DU/hOkbHfB98cUFZcC+FwyAVFpZJS3HpKI5XVh32Ye0=",
+   "sig": "WH+5XIuOKb5d+BvtFhoWmr4I2M/TGTWhhgMWsJAzmOtl3QAXXXoiWEREfcjy9rC6deO3pJqT4sRB0+dbMmWNDA=="
+  },
+  {
+   "body": {
+    "issued_at": "2026-11-01T00:00:00Z",
+    "publisher": "mail-pub",
+    "server_id": "mail",
+    "server_version": "1.0.0",
+    "tools": [
+     {
+      "description": "Envía un correo (simulado: solo lo registra).",
+      "input_schema": {
+       "properties": {
+        "body": {
+         "type": "string"
+        },
+        "to": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "body",
+        "to"
+       ],
+       "type": "object"
+      },
+      "name": "send_email",
+      "tool_hash": "sha256:8424d6a6ce863d9fbee4030d1644e0ae3dd22d4a9ce13184befa63e745cc7449"
+     },
+     {
+      "description": "Lista los correos recibidos.",
+      "input_schema": {
+       "properties": {},
+       "required": [],
+       "type": "object"
+      },
+      "name": "list_inbox",
+      "tool_hash": "sha256:3a150b83ed66baeb8d6c77b56ed9da06c5723280866953d15ad5281ac817c765"
+     }
+    ],
+    "v": 1
+   },
+   "pubkey": "ed25519:dKTfWevof4kDpH3BWuBhqxvWOSLFB1NYjp6CE6Fl69E=",
+   "sig": "OGJp3fEkbRGCOQehmGz5bag20yCn4G5QOGefWZe3Q9Ts7YynSTGeA1oere/6AUfuUnaHHBTCM0XTFulPsZ/tBg=="
+  }
+ ],
+ "note": "llave de confianza para otro publicador",
+ "servers": [
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "calendar-pub",
+     "server_id": "calendar",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Lista los eventos de un día.",
+       "input_schema": {
+        "properties": {
+         "day": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "day"
+        ],
+        "type": "object"
+       },
+       "name": "list_events",
+       "tool_hash": "sha256:4a3e4c035174a0f6cf2d6aea6386f0c9b28a61a2dfd6f2616d10ae5368d45b77"
+      },
+      {
+       "description": "Crea un evento.",
+       "input_schema": {
+        "properties": {
+         "day": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "day",
+         "title"
+        ],
+        "type": "object"
+       },
+       "name": "create_event",
+       "tool_hash": "sha256:8332cd90fb70fdfe93562a4462ebc04930710a4245a15282a8eec63b07351777"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:DU/hOkbHfB98cUFZcC+FwyAVFpZJS3HpKI5XVh32Ye0=",
+    "sig": "WH+5XIuOKb5d+BvtFhoWmr4I2M/TGTWhhgMWsJAzmOtl3QAXXXoiWEREfcjy9rC6deO3pJqT4sRB0+dbMmWNDA=="
+   },
+   "server_id": "calendar",
+   "tools": [
+    {
+     "description": "Lista los eventos de un día.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day"
+      ],
+      "type": "object"
+     },
+     "name": "list_events"
+    },
+    {
+     "description": "Crea un evento.",
+     "input_schema": {
+      "properties": {
+       "day": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "day",
+       "title"
+      ],
+      "type": "object"
+     },
+     "name": "create_event"
+    }
+   ]
+  },
+  {
+   "presented": {
+    "body": {
+     "issued_at": "2026-11-01T00:00:00Z",
+     "publisher": "mail-pub",
+     "server_id": "mail",
+     "server_version": "1.0.0",
+     "tools": [
+      {
+       "description": "Envía un correo (simulado: solo lo registra).",
+       "input_schema": {
+        "properties": {
+         "body": {
+          "type": "string"
+         },
+         "to": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "body",
+         "to"
+        ],
+        "type": "object"
+       },
+       "name": "send_email",
+       "tool_hash": "sha256:8424d6a6ce863d9fbee4030d1644e0ae3dd22d4a9ce13184befa63e745cc7449"
+      },
+      {
+       "description": "Lista los correos recibidos.",
+       "input_schema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+       },
+       "name": "list_inbox",
+       "tool_hash": "sha256:3a150b83ed66baeb8d6c77b56ed9da06c5723280866953d15ad5281ac817c765"
+      }
+     ],
+     "v": 1
+    },
+    "pubkey": "ed25519:dKTfWevof4kDpH3BWuBhqxvWOSLFB1NYjp6CE6Fl69E=",
+    "sig": "OGJp3fEkbRGCOQehmGz5bag20yCn4G5QOGefWZe3Q9Ts7YynSTGeA1oere/6AUfuUnaHHBTCM0XTFulPsZ/tBg=="
+   },
+   "server_id": "mail",
+   "tools": [
+    {
+     "description": "Envía un correo (simulado: solo lo registra).",
+     "input_schema": {
+      "properties": {
+       "body": {
+        "type": "string"
+       },
+       "to": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "body",
+       "to"
+      ],
+      "type": "object"
+     },
+     "name": "send_email"
+    },
+    {
+     "description": "Lista los correos recibidos.",
+     "input_schema": {
+      "properties": {},
+      "required": [],
+      "type": "object"
+     },
+     "name": "list_inbox"
+    }
+   ]
+  }
+ ],
+ "targets": [
+  "mail/send_email",
+  "mail/list_inbox"
+ ],
+ "trust": {
+  "pins": {},
+  "publishers": {
+   "calendar-pub": [
+    "ed25519:DU/hOkbHfB98cUFZcC+FwyAVFpZJS3HpKI5XVh32Ye0="
+   ],
+   "otro-pub": [
+    "ed25519:dKTfWevof4kDpH3BWuBhqxvWOSLFB1NYjp6CE6Fl69E="
+   ]
+  }
+ }
+}
