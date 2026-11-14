@@ -43,6 +43,42 @@ uv run python -m bench.record_demo --full           # grabación en docs/demo.ca
 uv run python docs/ficha_pdf.py                     # ficha técnica en PDF (2 páginas)
 ```
 
+## Fase 2: G13 — Codex y la Responses API (rama `adrian/codex`)
+
+**Verificación de §17.4 (las 5 incógnitas, con Codex 0.169.0 y un servidor de prueba): todas a favor, G13 va completo.**
+
+| # | Incógnita | Resultado |
+|---|---|---|
+| 1 | ¿`POST <base_url>/responses` por HTTP con SSE? | ✅ sí, con `wire_api = "responses"` y `env_key` (cabecera `Authorization: Bearer`) |
+| 2 | ¿Historial completo, sin `previous_response_id`? | ✅ `store: false`, `include: ["reasoning.encrypted_content"]`, historial completo en cada petición. **Pero Codex no reenvía el `reasoning`** que le devolvió el modelo: por eso el historial se compara ítem por ítem |
+| 3 | ¿El demonio hace peticiones por fuera? | ✅ no se vio ninguna; igual `owit exec` pasa `--disable daemon_auto_start` |
+| 4 | ¿Nombres MCP y descripciones? | ✅ `{"type": "namespace", "name": "mcp__issues", "tools": [{"name": "list_issues", …}]}`, descripción y esquema intactos; el modelo llama `{"namespace": "mcp__issues", "name": "list_issues"}`. Nombre neutral `mcp__issues__list_issues`, como Claude Code: §9.3 sin falsos positivos |
+| 5 | ¿Hooks en `codex exec`? ¿Campos de `PreToolUse`? | ✅ mismo JSON que Claude Code (`tool_name = "mcp__issues__list_issues"`, `tool_use_id = call_id`, salida `hookSpecificOutput.permissionDecision`). `exec_command` llega como **`Bash`** con `{"command"}`: `tool-check` decide por el `tool_call` registrado (`meta.model_tool`). Los hooks no corren hasta aprobarlos en `/hooks` (o `--dangerously-bypass-hook-trust`, que usa el probe) |
+
+| Pieza | Estado |
+|---|---|
+| `Gateway.adapters` (`anthropic_messages`, `openai_responses`), `POST /sessions` con `protocol`, 400 si el upstream no lo declara, `proxy(protocol, …)`, ruta `/s/<sid>/v1/responses`, `session_start.protocol` real | ✅ |
+| `gateway/protocols/openai_responses.py` (tabla de §17.4) y `ResponsesSSEReassembler`; registro justo antes de reenviar `response.completed` | ✅ |
+| Historial ítem por ítem (`Session.assistant_block_refs`; comprobación 10 acepta un turno cuyos bloques están todos en `llm_response` del contexto) | ✅ |
+| `previous_response_id` → `meta.anomaly = "incomplete_history"` y atribución `AMBIGUOUS` | ✅ |
+| `llm/openai_upstream.py` (`openai_compat`, `/v1/responses` y `/v1/chat/completions`) y modo Responses de `FakeUpstream` / `fake_app` | ✅ |
+| `owit exec -- codex` (flags `-c model_provider=owit …`, sin `OPENAI_API_KEY`/`OPENAI_BASE_URL`/`CODEX_API_KEY`) y `owit hooks install codex [--user-config]` | ✅ |
+| Fixtures `tests/fixtures/codex/0.169.0/{hooks,no-hooks}/` y `tests/test_decompose_responses.py` (20 tests, incluidas las 11 mutaciones de §9.1 sobre una bitácora de Codex) | ✅ 204 en verde |
+| `bench/codex_probe.py` con `fake` | ✅ `results/codex_probe.json` (`ok: true`) y `results/codex_probe_no_hooks.json` |
+| `bench/codex_probe.py --lmstudio http://localhost:1234/v1` (`gpt-oss-20b`) | ⬜ aquí no hay LM Studio corriendo |
+| §9.1 / §9.3 / §9.2 / §9.4 re-corridos | ✅ 364/364 · 47/47 sin falsos positivos · idéntico · +1,02 / +2,28 ms (antes +1,00 / +2,20, ruido), Codex +1,96 ms |
+
+```bash
+uv run python -m bench.codex_probe --out results              # Codex real → gateway → fake, con hooks
+uv run python -m bench.codex_probe --no-hooks --out results   # mínimo de §17.2: solo observación
+uv run python -m bench.codex_probe --save-fixtures            # regraba tests/fixtures/codex/<versión>/
+uv run python -m bench.codex_probe --lmstudio http://localhost:1234/v1
+```
+
+Atribución sobre la bitácora del probe (reglas): `list_issues` → `USER_INSTRUCTED` (alice, no repudio); `send_email` → `TOOL_INJECTED(mcp:issues)` parcial, `to` aportado por la herramienta: lo mismo que con Claude Code. `exec_command` → `MODEL_INITIATIVE` (el prompt no pide ejecutar nada).
+
+Toqué fuera de mis módulos, en cambios chicos y con tests: `integrations/exec.py` (Juliana: `codex` en `AGENTS`, `_SECRET_ENV`, `AGENT_PROTOCOL`), `cli.py` (bloque de `hooks install codex`), `attribution/attribute.py` y `rules.py` (Andres: `incomplete_history` → `AMBIGUOUS`; categorías de `exec_command`, `apply_patch`…), `ledger/verify.py` (comprobación 10 ítem por ítem). Avisar antes del merge (§17.2).
+
 ## Lo que entregas a los demás
 
 - ✅ Repo, `pyproject.toml` y `types.py` (en `main`). El comando `owit` entra por `openwitness.entry:main`.

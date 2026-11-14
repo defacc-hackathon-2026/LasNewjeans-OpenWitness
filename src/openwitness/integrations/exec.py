@@ -15,8 +15,11 @@ from typing import Mapping
 from .hooks import GatewayError, http_post, save_receipt
 
 DEFAULT_GATEWAY = "http://127.0.0.1:8787"
-AGENTS = {"claude": "claude-code"}                     # comando -> nombre del agente; opencode y codex: roadmap
-_SECRET_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_OAUTH_TOKEN")
+AGENTS = {"claude": "claude-code", "codex": "codex"}  # comando -> nombre del agente; opencode: G12
+_SECRET_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_OAUTH_TOKEN",
+               # Codex (§17.4): ni la API key de OpenAI ni otra base URL llegan al agente
+               "OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_API_KEY", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")
+AGENT_PROTOCOL = {"codex": "openai_responses"}        # el resto: anthropic_messages
 
 
 class ExecError(Exception):
@@ -64,6 +67,8 @@ def run_exec(cmd: list[str], user: str, key: Path, gateway: str = DEFAULT_GATEWA
     gateway = gateway.rstrip("/")
     agent = agent or detect_agent(cmd)
     body: dict = {"user_id": user, "agent": {"name": agent, "version": version or agent_version(cmd)}}
+    if agent in AGENT_PROTOCOL:
+        body["protocol"] = AGENT_PROTOCOL[agent]
     if upstream:
         body["upstream"] = upstream
     if strict:
@@ -75,6 +80,9 @@ def run_exec(cmd: list[str], user: str, key: Path, gateway: str = DEFAULT_GATEWA
     if status != 200 or not isinstance(j, dict) or "sid" not in j:
         raise ExecError(f"el gateway no creó la sesión ({status}: {j})")
     sid, token = j["sid"], j["token"]
+    if agent == "codex":                                # el proveedor de Codex apunta a la sesión (§17.4)
+        from .codex import exec_args
+        cmd = [cmd[0], *exec_args(gateway, sid), *cmd[1:]]
     child_env = agent_env(os.environ if env is None else env, agent, gateway, sid, token, user, key, strict)
     print(f"Open Witness: sesión {sid} · usuario {user} · agente {agent} · upstream {j.get('upstream')}",
           file=sys.stderr)

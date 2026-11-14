@@ -1,6 +1,6 @@
 # Open Witness
 
-**No repudio y atribución para agentes de IA.** Open Witness es un gateway que se pone entre cualquier agente (Claude Code, `refagent`…) y su LLM, sin modificar el agente. Cada sesión deja evidencia criptográfica de:
+**No repudio y atribución para agentes de IA.** Open Witness es un gateway que se pone entre cualquier agente (Claude Code, Codex CLI, `refagent`…) y su LLM, sin modificar el agente. Habla Anthropic Messages y la Responses API de OpenAI. Cada sesión deja evidencia criptográfica de:
 - qué pidió el usuario (prompts firmados con Ed25519);
 - qué herramientas vio el modelo (manifiestos firmados);
 - qué había exactamente en el contexto cuando actuó (bitácora encadenada, firmada y anclada).
@@ -35,6 +35,11 @@ uv run owit manifest check --server issues --tools tools.json  # ¿coincide lo q
 # Claude Code real a través del gateway, con prompts firmados y bloqueo de herramientas (G9)
 uv run owit hooks install claude-code --project . --yes        # hooks UserPromptSubmit, PreToolUse, SessionStart
 uv run owit exec --user alice -- claude                        # crea la sesión y lanza Claude Code por el gateway
+
+# Codex CLI a través del gateway, por la Responses API (G13, SPEC §17.4)
+uv run owit hooks install codex --user-config --yes            # [[hooks.*]] en ~/.codex/config.toml; aprobarlos una vez con /hooks
+uv run owit exec --user alice -- codex exec "Resume NOTAS.md"  # owit exec agrega -c model_provider=owit … y quita OPENAI_API_KEY
+uv run owit gateway start --upstream lmstudio_openai           # Codex → gateway → LM Studio (/v1/responses), sin traducción
 
 # verificar una bitácora (las 10 comprobaciones de SPEC §7.4)
 uv run owit verify data/ledger/<sid>.jsonl [--receipts ~/.owit/receipts/]
@@ -84,6 +89,8 @@ uv run python -m bench.latency --n 1000 --out results   # §9.4 latencia agregad
 uv run python -m bench.manifests --out results     # §9.3 manifiestos envenenados (corpus en bench/manifests_corpus/)
 uv run python -m bench.claude_code_probe           # Claude Code real → gateway → fake (sin API key)
 uv run python -m bench.claude_code_hooks_probe --out results   # G9: Claude Code + owit exec + hooks + manifiestos
+uv run python -m bench.codex_probe --out results               # G13: Codex + owit exec + hooks + manifiestos (Responses)
+uv run python -m bench.codex_probe --no-hooks --out results    # G13 mínimo: solo observación
 uv run python -m bench.local_model --runs 5        # agente → gateway → LM Studio (gpt-oss-20b)
 uv run python -m bench.demo && bash demo/demo.sh   # demo de §13.1: atribución, verify y manipulación
 
@@ -99,13 +106,14 @@ Resultados (14 de noviembre, upstream `fake`, localhost; tabla completa en [docs
 |---|---|
 | Manipulaciones detectadas (12 clases dentro del modelo de amenazas) | **364/364** |
 | Cola no anclada truncada | 0/4 sin recibo (límite L3, esperado); 2/2 con recibo del usuario |
-| Latencia añadida hasta el primer byte, p50 | +1,0 ms (petición pequeña); +2,2 ms (petición de Claude Code de 75 KB) |
-| Latencia añadida total, p50 | +1,4 ms; +2,6 ms |
+| Latencia añadida hasta el primer byte, p50 | +1,0 ms (petición pequeña); +2,3 ms (petición de Claude Code de 75 KB); +2,0 ms (Codex, 60 KB) |
+| Latencia añadida total, p50 | +1,4 ms; +2,7 ms; +2,4 ms |
 | `append()` p50 | 0,3–0,4 ms |
 | Hook `owit hook pre-tool` por invocación, p50 | ≈ 84 ms (contenedor de 4 vCPU) |
 | Manifiestos maliciosos bloqueados (6 clases) | **47/47** en `ToolFilter`, cliente MCP y gateway; `tool-check` deniega 47/47; 0 falsos positivos en 96 legítimas; firmados pero envenenados 0/5 (L5) |
 | Claude Code 2.1.323 real a través del gateway (con `fake` y con `gpt-oss-20b`) | integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
 | Claude Code 2.1.325 con `owit exec` y hooks (G9) | prompt firmado por el hook, con recibo; la herramienta MCP alterada tras firmar no llega al modelo y el hook la deniega |
+| Codex CLI 0.169.0 con `owit exec` y hooks (G13, Responses API) | 4 peticiones a `/v1/responses` con historial completo (`store = false`); prompt firmado por el hook, con recibo; 0 `history_mismatch` (comparación ítem por ítem: Codex no reenvía el `reasoning`); la herramienta MCP alterada no llega al modelo y el hook la deniega; misma atribución que con Claude Code (`TOOL_INJECTED(mcp:issues)`, parcial); +2,0 ms TTFB p50 (petición de 60 KB) |
 | `gpt-oss-20b` local ante una inyección sutil | el modelo cayó 5/5; bitácora íntegra 10/10 |
 | Atribución, modelo falso (35 escenarios, 7 clases) | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; sin R2b, 30/35 |
 | Atribución, `gpt-oss-20b` (3 × 35 corridas) | acción ocurrida en 74/105; **74/74 atribuidas correctamente**; inyección sutil exitosa 12/15 |
@@ -120,7 +128,7 @@ Detalle en `results/*.txt`. Las latencias de la tabla son de un portátil (`resu
 ```
 src/openwitness/   canonical, identity, manifests, ledger, gateway, llm, refagent, attribution, integrations, cli
 bench/             benchmarks de §9 (synthetic, tamper, latency, claude_code_probe, run_bench, scenarios/)
-tests/             pruebas y fixtures (tests/fixtures/claude_code/<versión>/)
+tests/             pruebas y fixtures (tests/fixtures/claude_code/<versión>/, tests/fixtures/codex/<versión>/)
 results/           salidas de los benchmarks
 docs/              ficha técnica, resumen, diagramas y hojas del equipo
 ```
@@ -142,7 +150,7 @@ Dependencias:
 - PyYAML (MIT)
 - Typer (MIT)
 
-Herramientas usadas en la evaluación: Claude Code 2.1.323 y 2.1.325, LM Studio, pandoc y Chromium (Playwright) para exportar la ficha.
+Herramientas usadas en la evaluación: Claude Code 2.1.323 y 2.1.325, Codex CLI 0.169.0, LM Studio, pandoc y Chromium (Playwright) para exportar la ficha.
 
 Trabajos y casos en que se apoya la idea: los ataques a descripciones y resultados de herramientas MCP (*tool poisoning*, *rug pull*, *shadowing*) y el caso Sentry como ejemplo de inyección por un servidor MCP. Solo se citan como motivación: no se usaron ni se atacaron servicios reales.
 
@@ -152,3 +160,4 @@ Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mal
 - `attribution/`, `refagent/`, `llm/naive.py`, `llm/client.py`, la ampliación de `llm/config.py`, `bench/make_scenarios.py`, `bench/run_bench.py`, `tests/test_attribution.py` y los textos de `docs/ficha/{amenaza,limites,doble_uso}.md`, `docs/resumen.md` y `docs/pitch.md` se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
 - Los 35 escenarios (`bench/scenarios/`) también se redactaron con ayuda de IA; las inyecciones son textos de ejemplo contra herramientas de demo.
 - La integración de las ramas del equipo, `src/openwitness/entry.py` (hooks sin Typer), el paso de atribución de `bench/demo.py`, `docs/ficha_pdf.py` y la re-corrida de los benchmarks se hicieron con Claude Code.
+- G13 (Fase 2): el adaptador `gateway/protocols/openai_responses.py`, la generalización del gateway a varios protocolos, `llm/openai_upstream.py`, el modo Responses de `llm/fake.py`, `integrations/codex/`, `bench/codex_probe.py` y `tests/test_decompose_responses.py` se escribieron con Claude Code (Claude Opus 5.5); los revisa Adrian.

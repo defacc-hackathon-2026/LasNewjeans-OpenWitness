@@ -27,10 +27,15 @@ from openwitness.ledger import MockAnchor
 from openwitness.llm.anthropic_upstream import AnthropicUpstream
 from openwitness.llm.base import LLMProfile
 from openwitness.llm.fake import fake_app
+from openwitness.llm.openai_upstream import OpenAIUpstream
 from openwitness.serve import ServerThread
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "claude_code" / "2.1.323" / "no-tool-search"
+CODEX_FIXTURE = ROOT / "tests" / "fixtures" / "codex" / "0.169.0" / "hooks"
+# caso -> (ruta del LLM, protocolo de la sesión, upstream)
+ANTHROPIC = ("/v1/messages", "anthropic_messages", "fake_http")
+RESPONSES = ("/v1/responses", "openai_responses", "fake_http_openai")
 
 
 def pct(xs: list[float]) -> dict:
@@ -53,18 +58,23 @@ def timed_stream(client: httpx.Client, url: str, body: dict, headers: dict) -> t
     return ttfb * 1000, (time.perf_counter() - t0) * 1000
 
 
-def bodies() -> dict[str, dict]:
+def bodies() -> dict[str, tuple[dict, tuple[str, str, str]]]:
     small = {"model": "fake-model", "max_tokens": 256, "stream": True,
              "system": "Eres un agente de prueba.",
              "messages": [{"role": "user", "content": "Resume los issues abiertos del proyecto demo"}],
              "tools": [{"name": "mcp__issues__list_issues", "description": "Lista issues.",
                         "input_schema": {"type": "object", "properties": {"project": {"type": "string"}}}}]}
-    out = {"refagent_small": small}
+    out = {"refagent_small": (small, ANTHROPIC)}
     reqs = sorted(FIXTURE.glob("*_request.json"))
     if reqs:
         cc = json.loads(reqs[0].read_text())
         cc["stream"] = True
-        out["claude_code_fixture"] = cc
+        out["claude_code_fixture"] = (cc, ANTHROPIC)
+    reqs = sorted(CODEX_FIXTURE.glob("*_request.json"))
+    if reqs:                                        # Codex por la Responses API (§17.4)
+        cx = json.loads(reqs[0].read_text())
+        cx["stream"] = True
+        out["codex_fixture"] = (cx, RESPONSES)
     return out
 
 
@@ -97,27 +107,30 @@ def run(n: int, work: Path) -> dict:
     up = AnthropicUpstream(LLMProfile("fake_http", "anthropic_compat", model="", base_url=fake.url,
                                       force_model=False))
     anchor = MockAnchor(work / "anchor" / "mock_anchor.jsonl")
-    gw = Gateway(work, KeyPair.generate(), KeyRegistry(), upstreams={"fake_http": up}, default_upstream="fake_http",
-                 anchor=anchor)
+    up_oa = OpenAIUpstream(LLMProfile("fake_http_openai", "openai_compat", model="", base_url=fake.url,
+                                      protocols=["responses"], force_model=False))
+    gw = Gateway(work, KeyPair.generate(), KeyRegistry(), upstreams={"fake_http": up, "fake_http_openai": up_oa},
+                 default_upstream="fake_http", anchor=anchor)
     gws = ServerThread(gw.app()).start()
     out: dict = {"n": n, "env": {"python": sys.version.split()[0], "platform": sys.platform, "machine": platform.machine(),
                                   "cpus": os.cpu_count()}, "cases": {}}
     with httpx.Client(timeout=30) as c:
-        for name, body in bodies().items():
-            j = c.post(gws.url + "/sessions", json={"user_id": "alice", "agent": "bench"}).json()
+        for name, (body, (path, protocol, upstream)) in bodies().items():
+            j = c.post(gws.url + "/sessions", json={"user_id": "alice", "agent": "bench", "protocol": protocol,
+                                                    "upstream": upstream}).json()
             h = {"x-api-key": j["token"], "anthropic-version": "2023-06-01"}
             for _ in range(20):   # calentamiento
-                timed_stream(c, fake.url + "/v1/messages", body, {})
-                timed_stream(c, gws.url + f"/s/{j['sid']}/v1/messages", body, h)
+                timed_stream(c, fake.url + path, body, {})
+                timed_stream(c, gws.url + f"/s/{j['sid']}{path}", body, h)
             gw.timings.clear()
             direct, via = ([], []), ([], [])
             for _ in range(n):      # intercalado para que el ruido afecte igual a ambos
-                a = timed_stream(c, fake.url + "/v1/messages", body, {})
-                b = timed_stream(c, gws.url + f"/s/{j['sid']}/v1/messages?beta=true", body, h)
+                a = timed_stream(c, fake.url + path, body, {})
+                b = timed_stream(c, gws.url + f"/s/{j['sid']}{path}?beta=true", body, h)
                 direct[0].append(a[0]); direct[1].append(a[1]); via[0].append(b[0]); via[1].append(b[1])
             led = gw.sessions[j["sid"]].ledger
             out["cases"][name] = {
-                "body_bytes": len(json.dumps(body)),
+                "body_bytes": len(json.dumps(body)), "protocol": protocol,
                 "ttfb_ms": {"direct": pct(direct[0]), "gateway": pct(via[0]),
                             "added_p50": round(pct(via[0])["p50"] - pct(direct[0])["p50"], 3)},
                 "total_ms": {"direct": pct(direct[1]), "gateway": pct(via[1]),

@@ -71,7 +71,7 @@ def build_gateway(config: Path, upstream: str | None, data: Path, registry: Path
         except NotImplementedError:
             continue
     if default not in ups:
-        raise typer.BadParameter(f"upstream {default!r} no existe o no habla Anthropic Messages")
+        raise typer.BadParameter(f"upstream {default!r} no existe o no tiene adaptador")
     return Gateway(data, _gateway_key(data), _registry(registry), upstreams=ups, default_upstream=default,
                    gate=_gate(manifests), anchor_every=anchor_every or int(gcfg.get("anchor_every", 20)),
                    anchor_interval_s=float(gcfg.get("anchor_interval_s", 30)),
@@ -304,7 +304,7 @@ def bench_attribution(out: Path = typer.Option(Path("results")), upstream: str =
 
 @app.command("fake")
 def fake_serve(port: int = 8788, script: Optional[Path] = None):
-    """Sirve el modelo falso por HTTP (protocolo Anthropic)."""
+    """Sirve el modelo falso por HTTP (Anthropic Messages en /v1/messages y Responses en /v1/responses)."""
     import uvicorn
     from .llm.fake import ScriptedResponder, fake_app
     uvicorn.run(fake_app(ScriptedResponder.load(script) if script else None), host="127.0.0.1", port=port,
@@ -418,14 +418,19 @@ def hook_session_start_cmd():
 
 
 @hooks_app.command("install")
-def hooks_install(agent: str = typer.Argument(..., help="claude-code (opencode y codex: roadmap)"),
+def hooks_install(agent: str = typer.Argument(..., help="claude-code o codex (opencode: G12)"),
                   project: Path = typer.Option(Path("."), help="proyecto donde se instalan los hooks"),
                   command: Optional[str] = typer.Option(None, help="comando owit que usarán los hooks"),
                   yes: bool = typer.Option(False, "--yes", "-y", help="escribir sin preguntar"),
-                  dry_run: bool = typer.Option(False, "--dry-run", help="solo mostrar el diff")):
+                  dry_run: bool = typer.Option(False, "--dry-run", help="solo mostrar el diff"),
+                  user_config: bool = typer.Option(False, "--user-config",
+                                                   help="codex: en $CODEX_HOME/config.toml y no en el proyecto")):
     """Escribe los hooks en la configuración local del proyecto. Antes muestra el diff."""
+    if agent == "codex":
+        _hooks_install_codex(project, command, yes, dry_run, user_config)
+        return
     if agent != "claude-code":
-        raise typer.BadParameter("por ahora solo claude-code; opencode y codex están en el roadmap")
+        raise typer.BadParameter("por ahora claude-code y codex; opencode es G12")
     import shutil
     from .integrations import claude_code
     owit = command or shutil.which("owit") or "owit"
@@ -445,13 +450,35 @@ def hooks_install(agent: str = typer.Argument(..., help="claude-code (opencode y
     typer.echo(f"hooks instalados en {path}; lanza el agente con `owit exec --user <usuario> -- claude`")
 
 
+def _hooks_install_codex(project: Path, command: Optional[str], yes: bool, dry_run: bool, user_config: bool):
+    """`owit hooks install codex` (§17.4): bloque `[[hooks.*]]` en config.toml, entre marcadores."""
+    import shutil
+    from .integrations import codex
+    owit = command or shutil.which("owit") or "owit"
+    try:
+        path, old, new = codex.plan_install(codex.config_path(None if user_config else project), owit)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    if old == new:
+        typer.echo(f"{path}: los hooks ya están instalados")
+        return
+    typer.echo(codex.diff(path, old, new))
+    if dry_run:
+        return
+    if not yes and not typer.confirm(f"¿Escribir {path}?"):
+        raise typer.Exit(1)
+    codex.write(path, new)
+    typer.echo(f"hooks instalados en {path}.\nCodex no los corre hasta aprobarlos: abre `codex` una vez y "
+               f"apruébalos con /hooks. Después: `owit exec --user <usuario> -- codex exec \"…\"`")
+
+
 @app.command("exec", context_settings={"allow_interspersed_args": False})
 def exec_cmd(cmd: list[str] = typer.Argument(..., help="comando del agente, después de `--`"),
              user: str = typer.Option(..., help="user_id registrado en el gateway"),
              key: Optional[Path] = typer.Option(None, help="llave privada del usuario (por defecto keys/<user>.key)"),
              gateway: Optional[str] = typer.Option(None, help="URL del gateway (por defecto $OWIT_GATEWAY o localhost:8787)"),
              upstream: Optional[str] = typer.Option(None, help="perfil del upstream para esta sesión"),
-             agent: Optional[str] = typer.Option(None, help="claude-code; si se omite, se deduce del comando"),
+             agent: Optional[str] = typer.Option(None, help="claude-code o codex; si se omite, se deduce del comando"),
              strict: bool = typer.Option(False, "--strict", help="rechazar los turnos sin prompt firmado"),
              prompt: Optional[str] = typer.Option(None, help="firmar este prompt y pasarlo como argumento (agentes sin hooks)")):
     """Crea una sesión en el gateway y lanza el agente a través de ella: `owit exec --user alice -- claude`."""

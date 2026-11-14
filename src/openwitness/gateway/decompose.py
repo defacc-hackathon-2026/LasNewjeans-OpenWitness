@@ -121,6 +121,14 @@ class Decomposer:
             key = content_key(m)
             if key in s.assistant_refs:
                 return list(s.assistant_refs[key])
+            # Ítem por ítem (Responses, §17.4): el agente puede reenviar un turno con ítems de varias respuestas
+            # o sin alguno (p. ej. sin `reasoning`). Vale si cada bloque es uno que el gateway reenvió.
+            per_block = [s.assistant_block_refs.get(content_key(b)) for b in m["content"]]
+            if per_block and all(r is not None for r in per_block):
+                refs: list[str] = []
+                for r in per_block:
+                    refs += [h for h in r if h not in refs]
+                return refs
             s.stats["history_mismatch"] += 1
             r = s.ledger.append("context_reset", agent, {"message": m}, [],
                                 {"thread_id": thread_id, "reason": "history_mismatch"})
@@ -198,7 +206,9 @@ class Decomposer:
             d = s.tools.decisions.get(tc.name)
             meta = {"tool": tc.name, "origin": origin, "manifest_hash": d.manifest_hash if d else None,
                     "thread_id": thread_id, "tool_use_id": tc.id}
-            if tc.name in stripped or (d is not None and not d.accepted):
+            if origin.startswith("hosted:"):
+                meta["hook_coverage"] = False      # la ejecuta el proveedor: no pasa por PreToolUse (L9)
+            elif tc.name in stripped or (d is not None and not d.accepted):
                 meta["anomaly"] = "stripped_tool_called"
             elif tc.name not in offered or d is None:
                 meta["anomaly"] = "unknown_tool_called"
@@ -206,4 +216,10 @@ class Decomposer:
             s.tool_calls[tc.id] = ToolCallInfo(r.hash, tc.name, origin, r.seq)
             out.append(r)
         s.assistant_refs[content_key(resp.as_message().to_dict())] = [r.hash for r in out]
+        by_id = {tc.id: r for tc, r in zip(resp.tool_calls, out[1:])}
+        for b in resp.content:
+            refs = [out[0].hash]
+            if b.get("type") == "tool_use" and b.get("id") in by_id:
+                refs.append(by_id[b["id"]].hash)
+            s.assistant_block_refs.setdefault(content_key(b), refs)
         return out

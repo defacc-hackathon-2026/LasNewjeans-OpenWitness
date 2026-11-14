@@ -1,0 +1,21 @@
+event: response.created
+data: {"type": "response.created", "sequence_number": 0, "response": {"id": "resp_3d70da10033c473e91dff934", "object": "response", "created_at": 0, "status": "in_progress", "model": "fake-model", "output": [], "error": null, "incomplete_details": null, "usage": null}}
+
+event: response.in_progress
+data: {"type": "response.in_progress", "sequence_number": 1, "response": {"id": "resp_3d70da10033c473e91dff934", "object": "response", "created_at": 0, "status": "in_progress", "model": "fake-model", "output": [], "error": null, "incomplete_details": null, "usage": null}}
+
+event: response.output_item.added
+data: {"type": "response.output_item.added", "sequence_number": 2, "output_index": 0, "item": {"type": "function_call", "id": "fc_5efa5900a95247bb", "status": "in_progress", "call_id": "call_1f207be8dd7e4ce7a65b", "arguments": "", "name": "exec_command"}}
+
+event: response.function_call_arguments.delta
+data: {"type": "response.function_call_arguments.delta", "sequence_number": 3, "item_id": "fc_5efa5900a95247bb", "output_index": 0, "delta": "{\"cmd\": \"cat NOTAS.md\"}"}
+
+event: response.function_call_arguments.done
+data: {"type": "response.function_call_arguments.done", "sequence_number": 4, "item_id": "fc_5efa5900a95247bb", "output_index": 0, "arguments": "{\"cmd\": \"cat NOTAS.md\"}"}
+
+event: response.output_item.done
+data: {"type": "response.output_item.done", "sequence_number": 5, "output_index": 0, "item": {"type": "function_call", "id": "fc_5efa5900a95247bb", "status": "completed", "call_id": "call_1f207be8dd7e4ce7a65b", "arguments": "{\"cmd\": \"cat NOTAS.md\"}", "name": "exec_command"}}
+
+event: response.completed
+data: {"type": "response.completed", "sequence_number": 6, "response": {"id": "resp_3d70da10033c473e91dff934", "object": "response", "created_at": 0, "status": "completed", "model": "fake-model", "output": [{"type": "function_call", "id": "fc_5efa5900a95247bb", "status": "completed", "call_id": "call_1f207be8dd7e4ce7a65b", "arguments": "{\"cmd\": \"cat NOTAS.md\"}", "name": "exec_command"}], "error": null, "incomplete_details": null, "usage": {"input_tokens": 10, "input_tokens_details": {"cached_tokens": 0}, "output_tokens": 5, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 15}}}
+

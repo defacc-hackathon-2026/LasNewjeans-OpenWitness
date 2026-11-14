@@ -241,7 +241,10 @@ def _check_message(m: dict, entries: list[tuple[str, Any]]) -> list[str]:
         reset = [p for kind, p in entries if kind == "context_reset" and p is not None]
         calls = [p for kind, p in entries if kind == "tool_call" and p is not None]
         if resp and not reset and all(p.get("content") != blocks for p in resp):
-            out.append("no coincide con la llm_response registrada")
+            # ítem por ítem (Responses, §17.4): cada bloque tiene que estar en alguna llm_response del contexto
+            known = [b for p in resp for b in p.get("content") or []]
+            if not blocks or any(b not in known for b in blocks):
+                out.append("no coincide con la llm_response registrada")
         if reset and all(p.get("message") != m for p in reset):
             out.append("no coincide con el context_reset registrado")
         ids = {b.get("id") for b in blocks if b.get("type") == "tool_use"}

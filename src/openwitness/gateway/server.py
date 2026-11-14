@@ -20,7 +20,9 @@ from ..ledger import BlobStore, Ledger, MockAnchor
 from ..ledger.anchor import Anchor
 from ..types import Actor, LedgerRecord, Receipt
 from .decompose import Decomposer
-from .protocols.anthropic_messages import PROTOCOL as ANTHROPIC, AnthropicMessagesAdapter, SSEReassembler
+from .protocols import ADAPTERS, UPSTREAM_PROTOCOL
+from .protocols.anthropic_messages import PROTOCOL as ANTHROPIC
+from .protocols.openai_responses import PROTOCOL as RESPONSES
 from .sessions import Policy, Session, new_session_id, new_token
 from .tool_filter import Gate, ToolFilter
 
@@ -29,6 +31,10 @@ HOP_HEADERS = {"content-length", "transfer-encoding", "connection", "content-enc
 
 class PromptRejected(Exception):
     pass
+
+
+class SessionConfigError(ValueError):
+    """La sesión no se puede crear con ese protocolo y ese upstream (HTTP 400, nunca a mitad de sesión)."""
 
 
 @dataclass
@@ -54,7 +60,8 @@ class Gateway:
         self.upstreams = upstreams
         self.default_upstream = default_upstream
         self.gate = gate
-        self.adapter = AnthropicMessagesAdapter()
+        self.adapters = {name: cls() for name, cls in ADAPTERS.items()}
+        self.adapter = self.adapters[ANTHROPIC]      # compatibilidad: el protocolo por defecto
         self.default_policy = (default_policy if isinstance(default_policy, Policy)
                                else Policy.from_dict(default_policy))
         self.sessions: dict[str, Session] = {}
@@ -70,24 +77,33 @@ class Gateway:
         return self.data / "ledger" / f"{sid}.jsonl"
 
     def create_session(self, user_id: str, agent: dict | str | None = None, upstream: str | None = None,
-                       policy: dict | None = None) -> Session:
+                       policy: dict | None = None, protocol: str | None = None) -> Session:
         agent = {"name": agent} if isinstance(agent, str) else dict(agent or {"name": "unknown"})
         up_name = upstream or self.default_upstream
         if up_name not in self.upstreams:
             raise KeyError(f"upstream desconocido: {up_name}")
+        protocol = protocol or ANTHROPIC
+        if protocol not in self.adapters:
+            raise SessionConfigError(f"protocolo desconocido: {protocol} (hay {', '.join(sorted(self.adapters))})")
+        up = self.upstreams[up_name]
+        prof = getattr(up, "profile", None)
+        if prof is not None and hasattr(prof, "effective_protocols") and \
+                UPSTREAM_PROTOCOL[protocol] not in prof.effective_protocols():
+            raise SessionConfigError(
+                f"el upstream {up_name} no habla {protocol} (declara {prof.effective_protocols()}); "
+                f"elige otro con --upstream")
         pol = Policy.from_dict({**self.default_policy.to_dict(), **(policy or {})})
         sid = new_session_id()
         led = Ledger(self.ledger_path(sid), self.kp, self.blobs, self.anchor, session_id=sid,
                      anchor_every=self.anchor_every, anchor_interval_s=self.anchor_interval_s, auto_anchor=False)
-        s = Session(sid, new_token(), user_id, agent, led, pol, up_name)
-        up = self.upstreams[up_name]
+        s = Session(sid, new_token(), user_id, agent, led, pol, up_name, protocol=protocol)
         led.append("session_start", Actor("gateway", "gateway"),
                    {"user_id": user_id, "agent": agent, "policy": pol.to_dict(), "upstream": up.describe()}, [],
-                   {"user_id": user_id, "agent": {k: str(v) for k, v in agent.items()}, "protocol": ANTHROPIC,
+                   {"user_id": user_id, "agent": {k: str(v) for k, v in agent.items()}, "protocol": protocol,
                     "upstream": {k: v for k, v in up.describe().items() if isinstance(v, (str, int, bool))},
                     "gateway_pubkey": self.kp.public_str(), "policy": pol.to_dict()})
         self.sessions[sid] = s
-        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol), self.adapter)
+        self.decomposers[sid] = Decomposer(ToolFilter(self.gate, pol), self.adapters[protocol])
         return s
 
     def add_prompt(self, s: Session, sp: dict) -> Receipt:
@@ -109,26 +125,29 @@ class Gateway:
 
     def tool_check(self, s: Session, tool: str, args: Any, tool_use_id: str | None = None,
                    mcp_server: Any = None) -> dict:
-        d = s.tools.decisions.get(tool)
-        origin, _ = self.adapter.tool_origin(tool)
+        call = s.tool_calls.get(tool_use_id or "")
+        # Codex reporta algunas internas con otro nombre (exec_command -> "Bash"): manda el del tool_call.
+        name = call.name if call is not None else tool
+        d = s.tools.decisions.get(name)
+        origin, _ = self.adapters[s.protocol].tool_origin(name)
         if d is not None and not d.accepted:
-            res = {"decision": "deny", "reason": f"Open Witness rechazó {tool}: {d.reason}"}
+            res = {"decision": "deny", "reason": f"Open Witness rechazó {name}: {d.reason}"}
         elif d is None and origin.startswith("mcp:"):
-            res = {"decision": "deny", "reason": f"Open Witness no verificó {tool} en esta sesión"}
+            res = {"decision": "deny", "reason": f"Open Witness no verificó {name} en esta sesión"}
         elif d is None and s.policy.unknown_builtin == "deny":
             res = {"decision": "deny", "reason": f"herramienta interna desconocida: {tool}"}
         else:
             res = {"decision": "allow", "reason": d.reason if d else "unknown_builtin"}
         if res["decision"] == "deny" and not s.policy.deny_stripped_tool_calls:
             res = {"decision": "allow", "reason": "policy_allows:" + res["reason"]}
-        call = s.tool_calls.get(tool_use_id or "")
         if call is None:   # sin tool_use_id: la última llamada con ese nombre
             cands = [c for c in s.tool_calls.values() if c.name == tool]
             call = max(cands, key=lambda c: c.seq) if cands else None
         s.ledger.append("tool_check", Actor("hook", "pre-tool"), {"tool": tool, "args": args},
                         [call.hash] if call else [],
                         {"decision": res["decision"], "reason": res["reason"], "tool": tool,
-                         "tool_use_id": tool_use_id, "origin": origin})
+                         "tool_use_id": tool_use_id, "origin": origin,
+                         **({"model_tool": name} if name != tool else {})})
         self._anchor_soon(s)
         return res
 
@@ -140,30 +159,42 @@ class Gateway:
 
     # ------------------------------------------------------------------ proxy
     async def proxy_messages(self, s: Session, body: dict, headers: dict[str, str], query: str) -> Forwarded:
+        return await self.proxy(ANTHROPIC, s, body, headers, query)
+
+    async def proxy(self, protocol: str, s: Session, body: dict, headers: dict[str, str], query: str) -> Forwarded:
+        """Una petición al LLM en el protocolo de la sesión (§7.5, §17.4). La ruta tiene que coincidir con él."""
+        adapter = self.adapters[s.protocol]
+        if protocol != s.protocol:
+            err = adapter.error_body("invalid_request_error",
+                                     f"Open Witness: la sesión {s.sid} habla {s.protocol}, no {protocol}.")
+            return Forwarded(400, {}, _one(json.dumps(err).encode()), "application/json")
         up = self.upstreams[s.upstream]
         async with s.lock:
             t0 = time.perf_counter()
-            req0 = self.adapter.parse_request(body)
+            req0 = adapter.parse_request(body)
             decisions, rejected = self.decomposers[s.sid].filter_tools(s, req0)
             t1 = time.perf_counter()
-            fwd = self.adapter.strip_tools(body, rejected)
+            fwd = adapter.strip_tools(body, rejected)
             if hasattr(up, "prepare"):
                 fwd = up.prepare(fwd)
-            req = self.adapter.parse_request(fwd)
+            req = adapter.parse_request(fwd)
             offered = [t.name for t in req0.tools]
             stripped = sorted(rejected & set(offered))
+            extra = {"model_requested": body.get("model"), "model_forwarded": fwd.get("model")}
+            if adapter.incomplete_history(body):
+                # previous_response_id: el gateway no ve el contexto completo (§17.4)
+                extra["anomaly"] = "incomplete_history"
+                s.stats["incomplete_history"] = s.stats.get("incomplete_history", 0) + 1
             outcome = self.decomposers[s.sid].on_request(
-                s, req, offered=offered, stripped=stripped, upstream=up.describe(),
-                extra_meta={"model_requested": body.get("model"), "model_forwarded": fwd.get("model")})
+                s, req, offered=offered, stripped=stripped, upstream=up.describe(), extra_meta=extra)
             self.timings.append({"filter_ms": (t1 - t0) * 1000, "decompose_ms": (time.perf_counter() - t1) * 1000})
         if outcome.rejected:
-            err = {"type": "error", "error": {"type": "permission_error",
-                                              "message": "Open Witness: el turno trae texto de usuario sin firma "
-                                                         "(require_signed_prompts)."}}
+            err = adapter.error_body("permission_error", "Open Witness: el turno trae texto de usuario sin firma "
+                                                         "(require_signed_prompts).")
             return Forwarded(403, {}, _one(json.dumps(err).encode()), "application/json")
         req_rec = outcome.record
         self._record("request", s, req_rec.seq, fwd)
-        r = await up.forward(ANTHROPIC, fwd, headers, query)
+        r = await up.forward(s.protocol, fwd, headers, query)
         media = r.headers.get("content-type", "application/json")
         out_headers = {k: v for k, v in r.headers.items()
                        if k.lower() not in HOP_HEADERS and k.lower() != "content-type"}
@@ -174,11 +205,12 @@ class Gateway:
     async def _stream(self, s: Session, req_rec: LedgerRecord, r) -> AsyncIterator[bytes]:
         """Devuelve los bytes tal cual y reensambla en paralelo.
 
-        La respuesta se registra justo antes de reenviar el chunk que cierra el mensaje (`message_stop`): así,
+        La respuesta se registra justo antes de reenviar el chunk que cierra el mensaje (`message_stop` en
+        Anthropic, `response.completed` en Responses): así,
         cuando el agente ve el final y dispara el hook `PreToolUse` o la siguiente petición, el `tool_call` ya está
         en la bitácora. El primer token nunca espera a la bitácora.
         """
-        sse = SSEReassembler()
+        sse = self.adapters[s.protocol].reassembler()
         recorded = False
         raw: list[bytes] = [] if self.record_dir else None
         try:
@@ -187,13 +219,13 @@ class Gateway:
                 if raw is not None:
                     raw.append(chunk)
                 if sse.complete and not recorded and r.status == 200:
-                    await self._on_response(s, req_rec, sse.response(r.status))
+                    await self._on_response(s, req_rec, sse.result(r.status))
                     recorded = True
                 yield chunk
         finally:
             await r.aclose()
-            if not recorded and r.status == 200 and sse.blocks:
-                await self._on_response(s, req_rec, sse.response(r.status))
+            if not recorded and r.status == 200 and sse.has_content:
+                await self._on_response(s, req_rec, sse.result(r.status))
             if raw is not None:
                 self._record("response", s, req_rec.seq, b"".join(raw).decode("utf-8", "replace"))
 
@@ -206,7 +238,7 @@ class Gateway:
             await r.aclose()
         if r.status == 200:
             try:
-                resp = self.adapter.parse_json_response(json.loads(data), r.status)
+                resp = self.adapters[s.protocol].parse_json_response(json.loads(data), r.status)
                 await self._on_response(s, req_rec, resp)
             except (json.JSONDecodeError, AttributeError):
                 pass
@@ -268,11 +300,15 @@ def create_app(gw: Gateway) -> Starlette:
     async def sessions(request: Request):
         j = await request.json()
         try:
-            s = gw.create_session(j["user_id"], j.get("agent"), j.get("upstream"), j.get("policy"))
+            s = gw.create_session(j["user_id"], j.get("agent"), j.get("upstream"), j.get("policy"),
+                                  j.get("protocol"))
+        except SessionConfigError as e:
+            return JSONResponse({"error": "bad_session", "reason": str(e)}, 400)
         except KeyError as e:
             return JSONResponse({"error": str(e)}, 400)
         return JSONResponse({"sid": s.sid, "token": s.token, "base_path": f"/s/{s.sid}",
-                             "gateway_pubkey": gw.kp.public_str(), "upstream": s.upstream})
+                             "gateway_pubkey": gw.kp.public_str(), "upstream": s.upstream,
+                             "protocol": s.protocol})
 
     async def prompts(request: Request):
         s = gw.auth(request)
@@ -318,17 +354,21 @@ def create_app(gw: Gateway) -> Starlette:
             return _unauthorized()
         return JSONResponse(s.stats)
 
-    async def messages(request: Request):
-        s = gw.auth(request)
-        if not s:
-            return _unauthorized()
-        try:
-            body = json.loads(await request.body())
-        except json.JSONDecodeError:
-            return JSONResponse({"type": "error", "error": {"type": "invalid_request_error",
-                                                            "message": "JSON inválido"}}, 400)
-        f = await gw.proxy_messages(s, body, dict(request.headers), request.url.query)
-        return StreamingResponse(f.body, status_code=f.status, headers=f.headers, media_type=f.media_type)
+    def llm_route(protocol: str):
+        async def handler(request: Request):
+            s = gw.auth(request)
+            if not s:
+                return _unauthorized()
+            try:
+                body = json.loads(await request.body())
+            except json.JSONDecodeError:
+                return JSONResponse(gw.adapters[protocol].error_body("invalid_request_error", "JSON inválido"), 400)
+            if not isinstance(body, dict):
+                return JSONResponse(gw.adapters[protocol].error_body("invalid_request_error",
+                                                                     "se esperaba un objeto JSON"), 400)
+            f = await gw.proxy(protocol, s, body, dict(request.headers), request.url.query)
+            return StreamingResponse(f.body, status_code=f.status, headers=f.headers, media_type=f.media_type)
+        return handler
 
     async def passthrough(request: Request):
         """Conteo de tokens, listado de modelos, etc.: se reenvía sin registrar (§7.5)."""
@@ -358,6 +398,7 @@ def create_app(gw: Gateway) -> Starlette:
         Route("/s/{sid}/receipts", receipts, methods=["GET"]),
         Route("/s/{sid}/end", end, methods=["POST"]),
         Route("/s/{sid}/stats", stats, methods=["GET"]),
-        Route("/s/{sid}/v1/messages", messages, methods=["POST"]),
+        Route("/s/{sid}/v1/messages", llm_route(ANTHROPIC), methods=["POST"]),
+        Route("/s/{sid}/v1/responses", llm_route(RESPONSES), methods=["POST"]),
         Route("/s/{sid}/{rest:path}", passthrough, methods=["GET", "POST", "HEAD"]),
     ])

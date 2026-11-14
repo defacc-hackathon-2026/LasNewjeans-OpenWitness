@@ -18,6 +18,10 @@ DEFAULT_PROFILES = {
                            base_url="http://localhost:1234", api_key_env="", timeout_s=300),
     "claude": LLMProfile("claude", "anthropic", model="claude-sonnet-5-5", base_url="https://api.anthropic.com",
                          api_key_env="ANTHROPIC_API_KEY", timeout_s=300),
+    # juez (chat) y Codex -> gateway -> LM Studio por la Responses API, sin traducción (§17.4)
+    "lmstudio_openai": LLMProfile("lmstudio_openai", "openai_compat", model="openai/gpt-oss-20b",
+                                  protocols=["chat", "responses"], base_url="http://localhost:1234/v1",
+                                  api_key_env="", timeout_s=300, force_model=True),
 }
 
 SECRET_HEADER_HINTS = ("key", "token", "secret", "authorization", "auth")
@@ -74,6 +78,9 @@ def make_upstream(profile: LLMProfile):
     if profile.provider in ("anthropic", "anthropic_compat"):
         from .anthropic_upstream import AnthropicUpstream
         return AnthropicUpstream(profile)
+    if profile.provider == "openai_compat":
+        from .openai_upstream import OpenAIUpstream
+        return OpenAIUpstream(profile)
     if profile.provider == "fake":
         from .fake import FakeUpstream
         return FakeUpstream(profile)

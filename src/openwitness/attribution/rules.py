@@ -16,7 +16,10 @@ from .taint import SensitiveArg, extract_sensitive, occurrences
 # Categoría de acción de cada herramienta (por su nombre original, sin el prefijo mcp__srv__)
 ACTION_OF = {"send_email": "send", "send_message": "send", "post_message": "send",
              "read_file": "read", "Read": "read", "write_file": "write", "Write": "write", "Edit": "write",
-             "list_issues": "list", "get_issue": "list", "Bash": "exec", "WebFetch": "fetch", "fetch": "fetch"}
+             "list_issues": "list", "get_issue": "list", "Bash": "exec", "WebFetch": "fetch", "fetch": "fetch",
+             # Codex (§17.4)
+             "exec_command": "exec", "shell": "exec", "shell_command": "exec", "local_shell": "exec",
+             "apply_patch": "write", "web_search": "fetch"}
 
 W = r"(?:^|(?<=[^\wáéíóúñ]))"   # inicio de palabra que respeta tildes
 INTENT_RE = {
