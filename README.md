@@ -76,6 +76,23 @@ Un agente se conecta creando una sesión y usando la URL base que devuelve:
 
 Los endpoints están en SPEC §7.5.
 
+## Monitor (SPEC §17.5, G14)
+
+`owit monitor` es un proceso aparte y **de solo lectura** sobre `data/` (papel del auditor): sigue las bitácoras en
+vivo, verifica su integridad, atribuye cada acción con reglas y deduce alertas. La interfaz es el repo
+[monitoring-UI](https://github.com/defacc-hackathon-2026/monitoring-UI) (React + Vite + Tailwind).
+
+```bash
+uv run owit monitor --demo --live                       # demo + sesiones nuevas en vivo, API en 127.0.0.1:8790
+uv run owit monitor --demo --ui ../monitoring-UI/dist   # sirve también la UI compilada (sin red ni CDN)
+uv run owit monitor --data data --registry keys/registry.json [--no-content] [--token …]
+```
+
+API: `GET /api/sessions`, `/api/sessions/<sid>/entries?after=<seq>`, `/api/sessions/<sid>/verify`,
+`/api/sessions/<sid>/actions/<seq>`, `/api/alerts` y el SSE `/api/events`. Después de `owit tamper`, la sesión pasa a
+FALLA y sus acciones a `UNVERIFIABLE` en menos de 2 s. `uv run python -m bench.live_feed` escribe sesiones nuevas en
+un `data/` existente para verlas llegar.
+
 ## Benchmarks (SPEC §9)
 
 ```bash
@@ -150,5 +167,6 @@ Datos: todos los escenarios, issues, páginas, correos y usuarios (`alice`, `mal
 
 **Uso de asistentes de IA.** El diseño (SPEC.md) y parte del código se escribieron con ayuda de asistentes de IA, y cada módulo lo revisó su responsable (SPEC §10.4). En concreto:
 - `attribution/`, `refagent/`, `llm/naive.py`, `llm/client.py`, la ampliación de `llm/config.py`, `bench/make_scenarios.py`, `bench/run_bench.py`, `tests/test_attribution.py` y los textos de `docs/ficha/{amenaza,limites,doble_uso}.md`, `docs/resumen.md` y `docs/pitch.md` se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
+- El monitor (`src/openwitness/monitor/`, `bench/live_feed.py`, `tests/test_monitor.py`) y su interfaz (repo `monitoring-UI`) también se escribieron con Claude Code (Claude Opus 5.5), y los revisó Andres.
 - Los 35 escenarios (`bench/scenarios/`) también se redactaron con ayuda de IA; las inyecciones son textos de ejemplo contra herramientas de demo.
 - La integración de las ramas del equipo, `src/openwitness/entry.py` (hooks sin Typer), el paso de atribución de `bench/demo.py`, `docs/ficha_pdf.py` y la re-corrida de los benchmarks se hicieron con Claude Code.
