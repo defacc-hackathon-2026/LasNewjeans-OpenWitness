@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import os
 from dataclasses import dataclass
+from datetime import datetime
 
 from ..canonical import hash_obj, normalize_text, sha256_tagged
 from ..timeutil import now_rfc3339
@@ -32,11 +33,25 @@ class VerifyResult:
         return self.ok
 
 
+def _is_utc_timestamp(ts: str) -> bool:
+    """RFC 3339 con zona horaria (§6.1). Sin zona no se puede comparar con la fecha de revocación."""
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00")).tzinfo is not None
+    except ValueError:
+        return False
+
+
 def verify_prompt(sp: dict, registry: KeyRegistry, seen_nonces: set[str]) -> VerifyResult:
     try:
         body, pubkey, sig = sp["body"], sp["pubkey"], sp["sig"]
         user_id, ts, nonce = body["user_id"], body["ts"], body["nonce"]
     except (KeyError, TypeError):
+        return VerifyResult(False, "malformed")
+    # Tipos: un cuerpo bien firmado pero con tipos raros no debe lanzar excepciones más abajo.
+    if not all(isinstance(x, str) for x in (pubkey, sig, user_id, ts, nonce, body.get("content", ""),
+                                            body.get("content_hash", ""))):
+        return VerifyResult(False, "malformed")
+    if not _is_utc_timestamp(ts):
         return VerifyResult(False, "malformed")
     if not verify(DOMAIN_PROMPT, body, sig, pubkey):
         return VerifyResult(False, "bad_sig")
