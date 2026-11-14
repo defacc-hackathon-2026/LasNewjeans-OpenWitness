@@ -4,6 +4,47 @@
 
 **Tu parte en una frase:** el verificador que responde "¿lo pidió el usuario o lo inyectó la herramienta Z, y de dónde salió cada dato?", los escenarios que lo prueban, y todo lo que se entrega al jurado. Tú envías el formulario.
 
+## Lo que ya está en `main` (Adrian, 14 de noviembre)
+
+- **Bitácoras de ejemplo: ya no hace falta escribirlas a mano.** `uv run python -m bench.synthetic data/synthetic` genera 5 sesiones reales pasando por el gateway en proceso:
+  - alice con firma y una inyección sutil en `mcp:issues`;
+  - mallory pidiendo el daño;
+  - alice sin firma;
+  - una sin streaming;
+  - una sin `<system-reminder>`.
+
+  Úsalas para las reglas. Los payloads y `meta` de cada `kind` están en SPEC §6.4. Para leerlas:
+
+  ```python
+  from openwitness.ledger import BlobStore, load_records, verify_ledger
+  ```
+
+  `IntegrityReport.ok_up_to(seq)` responde el paso 1 de §7.9: si es `False`, el veredicto es `UNVERIFIABLE`.
+- **Cómo reconstruir el contexto de un `tool_call`:**
+  - `tool_call.context[0]` es el `llm_request`;
+  - el `context` de ese `llm_request` son las entradas, y `meta.segments[k]` dice a qué mensaje corresponde cada una (SPEC §6.4).
+- **Procedencia de cada entrada (§7.9):**
+
+  | Entrada | Procedencia |
+  |---|---|
+  | `user_prompt` | `user_signed` |
+  | `user_text_unsigned` con `reason` `no_hook` o `no_match` | `user_unsigned` |
+  | `user_text_unsigned` con `agent_injected`, `non_text_block` o `empty` | `agent_injected` |
+  | `user_text_unsigned` con `system_role` | `system` |
+  | `user_text_unsigned` con `compaction` | `compaction` |
+  | `tool_result` | `meta.origin` (`mcp:<s>` o `builtin:<t>`) |
+  | `llm_response` y `tool_call` | `model` |
+  | `context_reset` | `compaction`, o `model` si es por `history_mismatch` |
+- **Modelo falso.** El transporte (SSE, `FakeUpstream`, `fake_app`) está en `llm/fake.py`. Tu "modelo ingenuo" es un `Responder`: un callable `body -> list[bloques]`, donde cada bloque es `{"type": "text", "text": …}` o `{"type": "tool_use", "name": …, "input": …}`; el `id` se completa solo. Se enchufa con `FakeUpstream(profile, responder=tu_responder)`. Ya hay un `ScriptedResponder` (guion YAML por pasos) que puedes usar o reemplazar.
+- **`llm/config.py`:** hay una versión mínima con `load_profiles`, `resolve` (la precedencia), `redact_headers` y `make_upstream`. Amplíala para el juez sin romper `load_profiles`.
+- **`refagent` contra el gateway.** Dos formas:
+  - en proceso, sin sockets: copiar el patrón de `bench/synthetic.py` (`Gateway` + `httpx.ASGITransport`), que es el más rápido para el benchmark;
+  - por HTTP: `owit gateway start --upstream fake` y el SDK `anthropic` con `base_url=http://127.0.0.1:8787/s/<sid>` y `api_key=<token>`.
+
+  Los formatos de `/sessions`, `/prompts`, `/tool-check` (manda `tool_use_id`) y `/end` están en SPEC §7.5.
+- **Fixtures de Claude Code** para ver los mensajes con rol `system` y los `<system-reminder>`: `tests/fixtures/claude_code/2.1.323/`.
+- **§9.1 ya no depende de tus escenarios:** usa `bench/synthetic.py`. Lo que sí necesito de ti es `bench/run_bench.py` para §9.2.
+
 ## Qué es tuyo
 
 | Módulo | SPEC | Contenido |
@@ -16,16 +57,16 @@
 
 ## Lo que entregas a los demás
 
-- **11:00** → Adrian: 2–3 bitácoras de ejemplo hechas a mano (formato §6.4) para probar `verify_ledger`.
+- ~~**11:00** → Adrian: 2–3 bitácoras hechas a mano~~: ya no hace falta (`bench/synthetic.py`).
 - **13:15** → Juliana: servidores MCP de demo ejecutables por stdio, para la prueba con Claude Code.
-- **14:00** → Adrian: escenarios y `bench/run_bench.py` estables (§9.1 usa esas sesiones).
+- **14:00** → todos: escenarios y `bench/run_bench.py` estables (§9.2).
 - **16:00** → jurado: el formulario enviado.
 
 ## Lo que necesitas de los demás
 
-- **Juliana, 10:00:** `canonical.py` y `KeyPair` (para firmar prompts en los escenarios).
-- **Adrian, 9:45:** fixture de Claude Code, para ver cómo llegan los mensajes con rol `system` y los recordatorios.
-- **Adrian, 14:00:** gateway que reenvía sesiones completas.
+- **Juliana, 10:00:** `canonical.py` y `KeyPair`. Ya hay una versión provisional en `main` (`from openwitness.identity import KeyPair, sign_prompt`), así que puedes empezar ya.
+- ~~**Adrian, 9:45:** fixture de Claude Code~~ ✅ `tests/fixtures/claude_code/2.1.323/`.
+- ~~**Adrian, 14:00:** gateway que reenvía sesiones completas~~ ✅ en `main`.
 - **Los tres, 15:00:** números congelados en `results/`.
 
 ## Checklist por hora
@@ -35,10 +76,10 @@
 - [ ] Crear `docs/resumen.md` y `docs/ficha_tecnica.md` a partir de §13.2 y §13.3.
 
 **9:45–12:30 — modelo falso, escenarios y reglas**
-- [ ] Modelo `fake`: un servidor con el protocolo Anthropic que devuelve SSE y obedece la última instrucción que ve (del usuario o de una herramienta).
+- [ ] Modelo `fake`: un `Responder` que obedece la última instrucción que ve (del usuario o de una herramienta). El SSE y el servidor ya están en `llm/fake.py`.
 - [ ] Servidores de demo: `mail` solo registra en un outbox, nunca envía; los destinatarios usan dominios `.test`.
-- [ ] Escribir las 2–3 bitácoras de ejemplo y pasárselas a Adrian a las 11:00.
-- [ ] Atribución sobre esas bitácoras:
+- [ ] Generar bitácoras con `bench/synthetic.py` para probar las reglas, en lugar de escribirlas a mano.
+- [ ] Atribución sobre esas bitácoras (y sobre las de Claude Code, reproduciendo las fixtures como en `tests/test_decompose.py`):
   - [ ] integridad primero: si falla en cualquier entrada anterior, el veredicto es `UNVERIFIABLE`;
   - [ ] evidencia: `tool_call` → `llm_request` → entradas del contexto, cada fragmento con su procedencia;
   - [ ] argumentos sensibles (correos, URLs, rutas) y dónde aparece cada uno (`arg_provenance`);

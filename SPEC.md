@@ -2,7 +2,7 @@
 
 > Nombre: **Open Witness**. En código se escribe `openwitness`: es el nombre del paquete Python y el prefijo de las etiquetas de separación de dominio de las firmas. El comando del CLI es **`owit`**.
 >
-> Estado: **especificación**, validada el 13 de noviembre con un prototipo descartable en `../scratchpad/` (hallazgos en su README; resultados preliminares en §9.5). El código del entregable todavía no existe.
+> Estado: **en implementación** (14 de noviembre). La especificación se validó el 13 de noviembre con un prototipo descartable en `../scratchpad/` (hallazgos en su README; resultados preliminares en §9.5). La bitácora, `verify_ledger`, el gateway Anthropic y los benchmarks §9.1 y §9.4 ya están en `src/` y `bench/`. Los ajustes al SPEC que salieron de la implementación (formatos de §6.4, comprobaciones de §7.4, contratos de §7.3, §7.5 y §7.7) quedan en el historial de git.
 >
 > Hecho para el **Defensive Acceleration Hackathon** (14 de noviembre de 2026, Track 1). El alcance separa lo que se construye **el día del hackathon** (§2, §12) de lo que queda en el **roadmap** (§16).
 
@@ -190,9 +190,10 @@ ToolFilter sigue funcionando porque evalúa `tools` en cada petición (§6.3). A
 
 **Para la demo, `owit exec` lanza Claude Code con `ENABLE_TOOL_SEARCH=false`**: todas las herramientas van en `tools` desde la primera petición, y el flujo es más simple de explicar. Ambos modos funcionaron en la prueba.
 
-> ⚠️ **Pendiente de verificar a primera hora** (9:00–9:45, §12):
-> - que, con la configuración real del usuario (no un `CLAUDE_CONFIG_DIR` limpio), el token de sesión tiene prioridad sobre un login de suscripción;
-> - fijar la versión de Claude Code y grabar una sesión de esa versión como fixture.
+> ✅ **Verificado el 14 de noviembre** (`bench/claude_code_probe.py`):
+> - con la configuración real del usuario (`~/.claude`, sin `CLAUDE_CONFIG_DIR` limpio), `ANTHROPIC_AUTH_TOKEN` **tiene prioridad** sobre el login de suscripción: las peticiones llegan al gateway con el token de sesión, sin pedir login (`--real-config`);
+> - versión fijada: **Claude Code 2.1.323**. Fixtures redactadas (sin `metadata` ni rutas locales) en `tests/fixtures/claude_code/2.1.323/`, con y sin búsqueda diferida. Al reproducirlas con el prompt firmado quedan 0 textos sin emparejar y 0 `history_mismatch` (`tests/test_decompose.py`).
+> - En `claude -p` lanzado desde un script hay que pasar `stdin` vacío (`< /dev/null`); si no, Claude Code espera 3 s por si llega algo por stdin.
 
 ### 5.4 Agentes soportados
 Revisado contra la documentación de cada agente en noviembre de 2026 (fuentes en §15). **El día del hackathon solo se integra Claude Code**; el análisis de OpenCode y Codex queda hecho para el roadmap (§16).
@@ -249,7 +250,8 @@ Cada protocolo necesita su adaptador en el gateway (`gateway/protocols/`), que n
 - **Tiempo**: RFC 3339 en UTC (`"2026-11-13T12:00:00Z"`). El tiempo local no es confiable; el tiempo que cuenta como evidencia es el del ancla.
 - **Llaves públicas**: `"ed25519:<base64>"`.
 - **Normalización de texto** para emparejar y buscar: Unicode NFC, finales de línea `\n` y sin espacios al inicio ni al final.
-- **Normalización de bloques** para comparar historiales: se conservan solo `type`, `text`, `id`, `name`, `input`, `tool_use_id`, `content`, `is_error`, `thinking` y `tool_name`; se descartan `cache_control` y similares, porque Claude Code los mueve de un turno a otro. Un `content` de tipo string se convierte en una lista con un bloque de texto.
+- **Normalización de bloques** para comparar historiales: se conservan solo `type`, `text`, `id`, `name`, `input`, `tool_use_id`, `content`, `is_error`, `thinking` y `tool_name`; se descartan `cache_control` y similares, porque Claude Code los mueve de un turno a otro. Un `content` de tipo string se convierte en una lista con un bloque de texto. En un `tool_result`, `is_error` ausente se normaliza a `false`. La implementación única vive en `openwitness/normalize.py`: la usan el adaptador, el `Decomposer` y la comprobación 10.
+- **Blobs y floats.** La regla de "sin floats" aplica a lo que se **firma** (`entry`, `SignedPrompt.body`, `SignedManifest.body`, recibos). Los **payloads** sí pueden traer floats, porque las peticiones reales al LLM los tienen (`temperature`, `top_p`, esquemas con `minimum: 0.5`). Por eso el blob se serializa con claves ordenadas y sin espacios, pero sin `canonical_json`, y `payload_hash` es el hash de **esos bytes exactos**. En `meta`, que va firmada, solo van enteros, strings, booleanos y `null`. Si el esquema de una herramienta trae floats, su `tool_hash` se calcula sobre los mismos bytes del blob.
 
 ### 6.2 `SignedPrompt`
 ```json
@@ -332,23 +334,27 @@ Cada decisión, aceptada o rechazada y con su motivo, se registra como `manifest
 
   Así, a partir de cualquier acción se puede reconstruir exactamente qué vio el modelo.
 - Génesis: `prev = "sha256:" + "0"*64`, `seq = 0`, `kind = session_start`.
+- **Firma:** `sig = gateway_sk.sign("openwitness/ledger/v1", entry)`. Como la firma cubre `sha256(canonical(entry))`, firmar la entrada es lo mismo que firmar su `hash`.
+- **`actor`** es uno de `user`, `agent`, `model`, `tool`, `gateway` o `hook`, más un `id` (p. ej. `{"type": "tool", "id": "mcp:issues"}`).
 
 **Tipos de entrada (`kind`)**
 
 | kind | payload | meta |
 |---|---|---|
-| `session_start` | configuración de la sesión | `user_id`, `agent` (nombre y versión), `protocol`, `upstream` (perfil sin secretos, §7.7), `gateway_pubkey`, `policy` |
-| `manifest_decision` | definición de la herramienta tal como se anunció | `tool`, `origin`, `decision`, `reason`, `tool_hash` |
-| `user_prompt` | `SignedPrompt` completo | `user_id`, `signed: true`, `thread_id` |
-| `user_text_unsigned` | texto sin firma que lo cubra: del rol usuario o de mensajes con rol `system` dentro de `messages` | `reason` (`no_hook`, `no_match`, `agent_injected`, `system_role`), `thread_id` |
-| `llm_request` | petición normalizada completa, **tras el filtrado** (system, messages, tools) | `thread_id`, `protocol`, `tools_offered[]`, `tools_stripped[]`, `upstream` |
-| `llm_response` | respuesta normalizada y reensamblada del stream | `thread_id`, `stop_reason`, `model_reported`, `usage` |
-| `tool_call` | `{id, name, args}` | `tool`, `origin`, `manifest_hash`, `thread_id`, `tool_use_id`, `anomaly` (si la herramienta fue quitada o es desconocida) |
-| `tool_check` | `{tool, args}` que envió el hook | `decision` (`allow`/`deny`), `reason`, `tool`; su `context` apunta al `tool_call`. Es una entrada aparte porque el `tool_call` ya está firmado cuando corre el hook |
-| `tool_result` | contenido del resultado | `tool`, `origin`, `call_entry`, `is_error` |
-| `context_reset` | nuevo historial tras compactación o edición | `thread_id`, `reason` (`compaction`, `history_mismatch`) |
-| `anchor` | recibo del ancla | `head_hash`, `head_seq`, `backend` |
+| `session_start` | `{user_id, agent, policy, upstream}` | `user_id`, `agent` (nombre y versión), `protocol`, `upstream` (perfil sin secretos, §7.7), `gateway_pubkey`, `policy` (incluye `builtin_allowlist`, que usa la comprobación 6) |
+| `manifest_decision` | `{name, description, input_schema}` tal como se anunció | `tool`, `origin`, `decision` (`accepted`/`rejected`), `reason`, `tool_hash`, `manifest_hash` (hash del `body` del `SignedManifest` que la respalda; `null` para internas y no firmadas) |
+| `user_prompt` | `SignedPrompt` completo | `user_id`, `signed: true`, `agent_session_id` (si lo hay). No lleva `thread_id`: se registra al recibir la firma, antes de saber en qué hilo aparecerá |
+| `user_text_unsigned` | `{text}` (texto normalizado) o `{block}` (bloque que no es texto: imagen, documento…) | `reason` (`no_hook`, `no_match`, `agent_injected`, `system_role`, `compaction`, `non_text_block`, `empty`), `thread_id` |
+| `llm_request` | petición normalizada **tras el filtrado**: `{system, messages, tools, model}` | `thread_id`, `protocol`, `tools_offered[]`, `tools_stripped[]`, `upstream`, `stream`, **`segments[]`** (ver abajo), `model_requested`, `model_forwarded` |
+| `llm_response` | `{content, stop_reason, model, usage}`, reensamblada del stream | `thread_id`, `stop_reason`, `model_reported`, `usage` (solo enteros) |
+| `tool_call` | `{id, name, args}` | `tool`, `origin`, `manifest_hash`, `thread_id`, `tool_use_id`, `anomaly` (`stripped_tool_called` o `unknown_tool_called`) |
+| `tool_check` | `{tool, args}` que envió el hook | `decision` (`allow`/`deny`), `reason`, `tool`, `tool_use_id`, `origin`; su `context` apunta al `tool_call`. Es una entrada aparte porque el `tool_call` ya está firmado cuando corre el hook |
+| `tool_result` | el bloque `tool_result` normalizado | `tool`, `origin`, `call_entry`, `is_error`, `tool_use_id`, `thread_id` |
+| `context_reset` | `{from_index, messages}` (compactación) o `{message}` (mensaje del asistente que no coincide) | `thread_id`, `reason` (`compaction`, `history_mismatch`), `from_index` |
+| `anchor` | `AnchorReceipt` completo | `head_hash`, `head_seq`, `backend` |
 | `session_end` | — | `reason` |
+
+**`segments` en `llm_request`.** Es una lista del mismo largo que `context`: `segments[k]` es el índice del mensaje de `payload.messages` que cubre `context[k]` (un mensaje puede necesitar varias entradas: el prompt firmado más el texto que agregó el agente, o varios `tool_result`). Vale `-1` solo para un `context_reset` de compactación, que cubre la petición entera. Sin `segments`, la comprobación 10 no puede saber qué entrada corresponde a qué mensaje.
 
 ### 6.5 Descomposición de peticiones (gateway)
 Cada petición al LLM trae **todo** el historial. Guardarlo entero en cada entrada duplicaría datos y haría difícil citar evidencia, así que el gateway lo descompone. Para cada petición:
@@ -370,8 +376,9 @@ Cada petición al LLM trae **todo** el historial. Guardarlo entero en cada entra
 Cuando el gateway recibe un `SignedPrompt` en `POST /s/<sid>/prompts`, lo verifica, **lo registra de inmediato como `user_prompt`** y devuelve al hook:
 ```json
 { "body": { "session_id": "...", "seq": 7, "entry_hash": "sha256:...", "prompt_hash": "sha256:..." },
-  "sig": "base64(gateway_sk)" }
+  "sig": "base64(gateway_sk)", "pubkey": "ed25519:<gateway>" }
 ```
+`prompt_hash` es el `payload_hash` de la entrada (el hash del blob con el `SignedPrompt`). El gateway rechaza (HTTP 400) un `SignedPrompt` cuyo `body.session_id` no es el `sid` de la ruta: así una firma no se puede reutilizar en otra sesión.
 Después, cuando ese texto aparece en una petición al LLM, la descomposición (§6.5) enlaza la petición con la entrada ya registrada. El hook guarda el recibo en `~/.owit/receipts/`. Si el operador después borra o altera la entrada, el recibo lo contradice (§4, L3 y L4).
 
 ### 6.7 Ancla
@@ -382,7 +389,8 @@ Cada `N` entradas (por defecto 20) o cada `T` segundos (por defecto 30), y siemp
   - **`MockAnchor`**: un archivo append-only aparte firmado con otra llave. Sirve para la demo offline y para los tests.
   - *(Opcional)* **`TSAAnchor`**: sello RFC 3161.
 - Cada envío al ancla incluye el `session_id`, para que el verificador pueda listar todas las cabezas ancladas de una sesión **desde el ancla**, sin depender de lo que diga la bitácora.
-- Se agrega una entrada `anchor` con el recibo. **Se hace de forma asíncrona y fuera del camino crítico**, para no inflar la latencia.
+- El gateway firma `{session_id, head_hash}` con `gateway_sk` y la etiqueta `openwitness/anchor/v1`. El ancla rechaza un envío cuya firma no verifica.
+- Se agrega una entrada `anchor` con el recibo. **Se hace de forma asíncrona y fuera del camino crítico**, para no inflar la latencia: el gateway comprueba si toca anclar después de registrar cada respuesta y cada `tool_check`, en un hilo aparte. Una entrada `anchor` nunca se ancla a sí misma, así que `unanchored_tail` cuenta solo las entradas que no son `anchor`.
 
 > ⚠️ Solo si se intenta G11: verificar qué API de Rekor está vigente (v1 o v2/"rekor-tiles"), si acepta llaves Ed25519 en `hashedrekord`, y los límites de uso. Si algo falla, la demo usa `MockAnchor` y Rekor queda como integración opcional.
 
@@ -430,11 +438,17 @@ class TrustStore:            # publisher -> [pubkeys]; pins server_id -> manifes
     def pin(self, server_id: str, manifest_hash: str, pubkey: str) -> None
     def load_dir(self, path: Path) -> None   # manifests/*.json
 class ManifestGate:
-    def evaluate_tool(self, server_id: str, live: ToolDef) -> GateDecision
+    def evaluate_tool(self, server_id: str, live: ToolDef, seen_owner: dict[str, str]) -> GateDecision
     def evaluate_server(self, manifest: SignedManifest | None, live_tools: list[ToolDef]) -> list[GateDecision]
     # GateDecision(accepted: bool, reason: Literal["ok","builtin","unsigned","bad_sig","untrusted_key",
-    #   "descriptor_mismatch","rug_pull","shadowing","unknown_builtin"], tool: ToolDef, origin: str)
+    #   "descriptor_mismatch","rug_pull","shadowing","unknown_builtin"], tool: ToolDef, origin: str,
+    #   tool_hash: str | None, manifest_hash: str | None)      # definido en types.py
 ```
+- `live.name` es el nombre **original** del servidor (`list_issues`), no el que ve el modelo (`mcp__issues__list_issues`). `ToolFilter` hace esa traducción.
+- `seen_owner` (nombre de herramienta → `server_id`) es estado **de la sesión**, que guarda el gateway; el gate lo consulta y lo actualiza para detectar *tool shadowing*.
+- `manifest_hash = hash_obj(SignedManifest.body)`. Lo registra la `manifest_decision` y lo copia cada `tool_call` de esa herramienta (comprobación 6).
+
+**`ToolFilter` (`gateway/tool_filter.py`).** `ToolFilter(gate, policy).evaluate(state, tools) -> list[GateDecision]`, una decisión por herramienta y en orden. El filtro **no escribe en la bitácora**: con sus decisiones, el gateway registra las `manifest_decision`, quita de `tools` las rechazadas y reemplaza los `tool_reference` (§6.3). Así la escritura de la bitácora queda en un único sitio. Si no hay `gate` (solo en desarrollo), las herramientas MCP se aceptan con `reason = "unsigned"`, nunca con `"ok"`.
 
 ### 7.4 `openwitness.ledger` — Adrian
 ```python
@@ -442,7 +456,11 @@ class BlobStore:                         # data/blobs/<sha256>
     def put(self, data: bytes) -> str
     def get(self, h: str) -> bytes | None   # None = borrado por privacidad
 class Ledger:                            # data/ledger/<session_id>.jsonl
-    def __init__(self, path: Path, signer: KeyPair, blobs: BlobStore, anchor: Anchor): ...
+    def __init__(self, path: Path, signer: KeyPair, blobs: BlobStore, anchor: Anchor | None, *,
+                 session_id: str | None = None, anchor_every: int = 20, anchor_interval_s: float = 30,
+                 auto_anchor: bool = True): ...   # auto_anchor=False en el gateway (ancla fuera del camino crítico)
+    def anchor_if_due(self) -> LedgerRecord | None
+    def force_anchor(self) -> LedgerRecord | None
     def append(self, kind: str, actor: Actor, payload: Any, context: list[str], meta: dict) -> LedgerRecord
     def head(self) -> LedgerRecord
     def receipt(self, record: LedgerRecord) -> Receipt
@@ -459,15 +477,20 @@ def verify_ledger(path: Path, blobs: BlobStore, gateway_pubkey: str, registry: K
 
 **Comprobaciones de `verify_ledger`** (todas obligatorias):
 1. Cada `hash` coincide con `canonical(entry)`.
-2. Cada `sig` es válida bajo `gateway_pubkey`.
-3. `prev` encadena y `seq` es contiguo, sin huecos ni duplicados.
+2. Cada `sig` es válida bajo `gateway_pubkey`, y la `gateway_pubkey` de `session_start` es esa misma.
+3. `prev` encadena y `seq` es contiguo, sin huecos ni duplicados. La entrada 0 es `session_start`, y todas llevan el mismo `session_id`.
 4. Cada `context[]` solo referencia hashes de entradas anteriores de la misma sesión.
-5. En cada `user_prompt`, el `SignedPrompt` del blob verifica contra el registro y su hash coincide con `payload_hash`.
-6. Cada `tool_call` con origen `mcp:*` referencia un `manifest_hash` aceptado en una `manifest_decision` anterior, salvo que lleve `meta.anomaly` (una herramienta quitada que el modelo llamó igual se registra, no es manipulación). Cada `builtin:*` está en la lista de herramientas internas permitidas.
-7. Cada `anchor` pasa `check()` contra el backend y su `head_hash` coincide con la entrada en `head_seq`. **Además, cada cabeza que devuelve `heads_for(session_id, gateway_pubkey)` existe en la bitácora.** Sin esta segunda parte, un operador que trunca la cola junto con sus entradas `anchor` pasaría sin ser detectado (lo encontró la prueba del 13 de noviembre).
-8. Cada recibo de usuario aportado coincide con la entrada en su `seq`.
+5. En cada `user_prompt`, el `SignedPrompt` del blob verifica contra el registro (firma, llave activa en `ts`, `content_hash`, nonce no repetido), su `body.session_id` es el de la sesión y su `user_id` coincide con `meta.user_id`. Que su hash coincida con `payload_hash` lo cubre la comprobación 9.
+6. Cada `tool_call` sin `meta.anomaly` corresponde a una `manifest_decision` **anterior y aceptada** para esa misma herramienta. Si el origen es `mcp:*`, además con el mismo `manifest_hash`. Un `tool_call` con `meta.anomaly` (una herramienta quitada que el modelo llamó igual) se registra y no cuenta como manipulación. Una `manifest_decision` aceptada con `reason = "builtin"` debe estar en la `builtin_allowlist` de la política de `session_start`, si la hay.
+7. Cada `anchor` pasa `check()` contra el backend y su `head_hash` coincide con la entrada en `head_seq`. **Además, cada cabeza que devuelve `heads_for(session_id, gateway_pubkey)` existe en la bitácora y tiene su entrada `anchor`.** Sin la primera parte, un operador que trunca la cola junto con sus entradas `anchor` pasaría sin ser detectado (lo encontró la prueba del 13 de noviembre). Sin la segunda, pasaría borrar la última entrada `anchor` de la sesión.
+8. Cada recibo de usuario aportado coincide con la entrada en su `seq` (`entry_hash` y `prompt_hash`). Un recibo cuyo `seq` ya no existe en la bitácora delata una cola truncada (L3).
 9. Si un blob está presente, su hash coincide. Si falta, se marca como `missing`; no invalida la cadena, pero reduce la evidencia disponible.
-10. Si el blob del `llm_request` está presente, sus mensajes son coherentes con las entradas de su `context`: cada mensaje corresponde a una entrada y no sobra ni falta ninguna.
+10. Si el blob del `llm_request` está presente, sus mensajes son coherentes con las entradas de su `context`, según `meta.segments`:
+    - cada mensaje tiene al menos una entrada, y cada entrada apunta a un mensaje que existe;
+    - el tipo de cada entrada es compatible con el rol de su mensaje;
+    - el contenido coincide: cada `tool_result` del mensaje tiene su entrada y viceversa, el texto queda cubierto por las entradas de texto (prompt firmado más texto sin firma), y un mensaje del asistente es igual a la `llm_response` registrada (o a su `context_reset` por `history_mismatch`).
+
+    Las entradas cuyo blob falta no se contrastan.
 
 ### 7.5 `openwitness.gateway` — Adrian (`tool_filter`: Juliana)
 Servidor HTTP asíncrono (Starlette/FastAPI + `httpx` con streaming).
@@ -484,7 +507,15 @@ Servidor HTTP asíncrono (Starlette/FastAPI + `httpx` con streaming).
 | `GET /s/<sid>/v1/models` | Agentes que listan modelos | Reenvía al upstream sin registrar |
 | `POST /s/<sid>/tool-check` | Hooks de herramienta de los tres agentes | `{tool, args}` → `allow` o `deny` con motivo; la decisión se registra como entrada `tool_check` que apunta al `tool_call` |
 | `GET /s/<sid>/receipts` | Usuario | Recibos de la sesión |
-| `POST /s/<sid>/end` | `owit exec`, `refagent` | Cierra la sesión y fuerza el ancla |
+| `POST /s/<sid>/end` | `owit exec`, `refagent` | Cierra la sesión y fuerza el ancla. Devuelve `{ok, ledger, stats}` |
+| `GET /s/<sid>/stats` | Pruebas, demo | Contadores de la sesión: `requests`, `history_mismatch`, `unmatched_user_text`, `agent_injected`, `system_role`, `context_reset`… |
+| `GET /health` | Todos | `{ok, gateway_pubkey}` |
+| `/s/<sid>/<resto>` | Agentes | Passthrough sin registrar (p. ej. `/v1/messages/count_tokens`, `/v1/models`) |
+
+**Formato de los cuerpos** (todo JSON; la credencial va en `x-api-key` o `Authorization: Bearer`):
+- `POST /sessions`: `{user_id, agent: {name, version} | "nombre", upstream?: "<perfil>", policy?: {...}}` → `{sid, token, base_path, gateway_pubkey, upstream}`. En el hackathon esta ruta no tiene autenticación, porque el gateway escucha en `localhost`.
+- `POST /s/<sid>/prompts`: el `SignedPrompt` → el recibo (§6.6). Si el prompt no verifica, devuelve HTTP 400 con `{error: "prompt_rejected", reason}`.
+- `POST /s/<sid>/tool-check`: `{tool, args, tool_use_id?, mcp_server?}` → `{decision: "allow"|"deny", reason}`. Con `tool_use_id` (Claude Code lo manda en `PreToolUse`), el `tool_check` apunta exactamente a su `tool_call`; sin él, a la última llamada con ese nombre.
 
 **Política por sesión**
 ```toml
@@ -498,7 +529,9 @@ unknown_builtin = "allow_and_log"   # o "deny"
 **Detalles del proxy**
 - Reenvía las cabeceras de protocolo (`anthropic-version`, `anthropic-beta`, y las equivalentes de OpenAI). Quita la credencial del agente y pone la del upstream.
 - *(Roadmap)* **Responses API (Codex):** los bloques de razonamiento cifrados (`reasoning` con `encrypted_content`) se registran como blobs opacos con procedencia `model`. Las herramientas alojadas por el upstream (p. ej. `web_search_call`) se registran como `tool_call` y `tool_result` con origen `hosted:<nombre>` y `meta.hook_coverage = false`.
-- **El stream se devuelve al agente tal cual llega.** El registro se hace en paralelo; la bitácora nunca bloquea el primer token.
+- **El stream se devuelve al agente tal cual llega.** El registro se hace en paralelo; la bitácora nunca bloquea el primer token. La `llm_response` y sus `tool_call` se registran **justo antes de reenviar el chunk que trae `message_stop`**. Así, cuando el agente ve el final del mensaje y dispara `PreToolUse` o la siguiente petición, el `tool_call` ya está en la bitácora y no hay carrera. Esto solo retrasa el último chunk, alrededor de 1 ms.
+- Las peticiones de una misma sesión se serializan con un `asyncio.Lock` mientras se filtran y se descomponen (subagentes en paralelo); el reenvío al upstream va fuera del lock.
+- Con `--record <dir>`, el gateway guarda cada petición reenviada y cada respuesta. Así se graban las fixtures (`bench/claude_code_probe.py`).
 - Si el modelo llama a una herramienta que se había quitado (no debería poder), el `tool_call` se registra igual con `meta.anomaly = "stripped_tool_called"` (o `"unknown_tool_called"` si nunca se le ofreció), y el hook la deniega. Ambos casos se reprodujeron con Claude Code real.
 - La ruta de mensajes acepta query string (Claude Code envía `?beta=true`) y la reenvía al upstream.
 - Las peticiones que no son de mensajes (conteo de tokens, listado de modelos) se reenvían sin registrar o con un registro mínimo.
@@ -515,7 +548,7 @@ class Decomposer:
 ```
 
 ### 7.6 `openwitness.integrations` — Juliana
-`owit exec --agent <claude-code|opencode|codex> -- <comando>` hace en todos los casos lo mismo: crea la sesión, redirige el agente al gateway (§5.4) con el token de sesión y exporta `OWIT_GATEWAY`, `OWIT_SESSION` y `OWIT_USER_KEY` para los hooks. Si se omite `--agent`, se deduce del comando.
+`owit exec --agent <claude-code|opencode|codex> -- <comando>` hace en todos los casos lo mismo: crea la sesión, redirige el agente al gateway (§5.4) con el token de sesión y exporta `OWIT_GATEWAY`, `OWIT_SESSION`, `OWIT_TOKEN`, `OWIT_USER` y `OWIT_USER_KEY` para los hooks (los mismos de §5.3). Los hooks se autentican ante el gateway con `OWIT_TOKEN`. Si se omite `--agent`, se deduce del comando.
 
 `owit hooks install <agente> [--project .]` escribe la configuración de hooks o del plugin. Antes de escribir, muestra el diff.
 
@@ -546,6 +579,10 @@ class Decomposer:
 **Latencia de los hooks:** cada invocación arranca Python, unos **105 ms** medidos en la prueba (uno por prompt y uno por herramienta). Se mide en §9.4. Si molesta, el hook se reduce a un script mínimo que habla con el gateway, y la firma la hace un demonio local (`owit agentd`) que guarda `user_sk`.
 
 ### 7.7 `openwitness.llm` — upstreams y juez (incluidos los LLM propios) — Adrian (upstreams) y Andres (`fake`, juez, config)
+
+**Reparto dentro de `llm/`:**
+- **Adrian:** `base.py`, `anthropic_upstream.py`, y en `fake.py` el **transporte**: el SSE, `FakeUpstream` (en proceso, sin sockets), `fake_app` (el mismo modelo por HTTP, para §9.4) y un `ScriptedResponder` mínimo.
+- **Andres:** el **modelo** falso de los escenarios: un `Responder`, es decir, un callable `body -> list[bloques]` (texto o `tool_use`), que se enchufa con `FakeUpstream(profile, responder=…)`; el juez; y `config.py`. Adrian dejó un `config.py` mínimo (`load_profiles`, precedencia, redacción) para que el gateway arranque; Andres lo amplía sin romper `load_profiles`.
 Los perfiles de LLM sirven para dos cosas:
 - **Upstream del gateway**: a dónde reenvía el gateway las peticiones del agente.
 - **Juez de atribución**: qué modelo evalúa la evidencia (§7.9).
@@ -640,11 +677,18 @@ class LLMProfile:
     tool_calling: Literal["native", "prompted", "auto"] = "auto"
     timeout_s: int = 60
     verify_tls: bool | str = True
+    force_model: bool | None = None   # None = True para anthropic_compat: LM Studio no conoce los modelos
+                                      # que pide Claude Code, así que el gateway pone `model`. Se registran
+                                      # `model_requested` y `model_forwarded` en el llm_request
+    script: str | None = None         # solo provider = "fake"
 
 class Upstream(Protocol):                 # usado por el gateway: reenvío casi transparente
     profile: LLMProfile
-    async def forward(self, protocol: str, body: dict, headers: dict) -> AsyncIterator[bytes]
+    async def forward(self, protocol: str, body: dict, headers: dict, query: str = "") -> UpstreamResponse
+    async def passthrough(self, method: str, path: str, body: bytes, headers: dict, query: str = "") -> UpstreamResponse
     def describe(self) -> dict            # sin secretos
+# UpstreamResponse(status: int, headers: dict, body: AsyncIterator[bytes]): hace falta el estado HTTP para
+# reenviar los errores del upstream (401, 429, 529) tal cual al agente.
 
 class LLMClient(Protocol):                # usado por el juez: llamada simple con tipos neutrales
     profile: LLMProfile
@@ -791,6 +835,9 @@ defacc-deliverable/
 ├── src/openwitness/
 │   ├── __init__.py
 │   ├── canonical.py
+│   ├── normalize.py              # normalización de bloques (§6.1), compartida por gateway y verificador
+│   ├── timeutil.py               # RFC 3339 en UTC
+│   ├── serve.py                  # uvicorn en un hilo (tests, bench, demo)
 │   ├── types.py                  # SignedPrompt, LedgerRecord, Verdict, Message, ToolDef, ToolCall, Normalized*
 │   ├── identity/
 │   │   ├── keys.py
@@ -845,6 +892,8 @@ defacc-deliverable/
 │   ├── scenarios/                # YAML con etiqueta de verdad
 │   ├── scripts/                  # guiones del upstream fake
 │   ├── manifests_corpus/         # manifiestos legítimos y envenenados
+│   ├── synthetic.py              # sesiones válidas por el gateway en proceso (sin depender de refagent)
+│   ├── claude_code_probe.py      # Claude Code real → gateway → fake; graba fixtures redactadas
 │   ├── tamper.py
 │   ├── attribution.py
 │   ├── manifests.py
@@ -1047,19 +1096,28 @@ Este SPEC sigue siendo la fuente de verdad: si una hoja contradice al SPEC, mand
 
 **Dependencias entre integrantes** (lo que alguien espera de otro y para cuándo):
 
-| Quién entrega | Qué | A quién | Para cuándo |
-|---|---|---|---|
-| Adrian | Repo, `pyproject.toml`, esqueleto de `types.py` | Todos | 9:30 |
-| Juliana | `canonical.py` y `KeyPair` con tests | Adrian, Andres | **10:00** |
-| Los tres | `types.py` y formatos de §6 revisados y congelados | Todos | **9:45** |
-| Adrian | Fixture de una sesión real de Claude Code | Juliana (`ToolFilter`, hooks), Andres (procedencias) | 9:45 |
-| Andres | 2–3 bitácoras de ejemplo hechas a mano (formato §6.4) | Adrian (pruebas de `verify_ledger`) | 11:00 |
-| Juliana | `ManifestGate.evaluate_tool()` | Adrian (gateway) | 12:30 |
-| Adrian | Gateway que reenvía una sesión completa de `refagent` | Andres (bench §9.2), Juliana (hooks) | **14:00** (punto de decisión de G9) |
-| Andres | Escenarios y `bench/run_bench.py` estable | Adrian (§9.1 usa sus sesiones) | 14:00 |
-| Los tres | Números congelados en `results/` | Andres (resumen y ficha) | **15:00** |
+| Quién entrega | Qué | A quién | Para cuándo | Estado |
+|---|---|---|---|---|
+| Adrian | Repo, `pyproject.toml`, `types.py` | Todos | 9:30 | ✅ en `main` |
+| Juliana | `canonical.py` y `KeyPair` con tests | Adrian, Andres | **10:00** | 🟡 Adrian dejó una versión provisional que cumple el contrato (§7.1–7.2). Juliana la revisa, le agrega tests y queda como dueña |
+| Los tres | `types.py` y formatos de §6 revisados y congelados | Todos | **9:45** | 🟡 propuesta en `main` (§6.4 ampliada); falta el visto bueno de los tres |
+| Adrian | Fixture de una sesión real de Claude Code | Juliana (`ToolFilter`, hooks), Andres (procedencias) | 9:45 | ✅ `tests/fixtures/claude_code/2.1.323/` |
+| ~~Andres~~ | ~~2–3 bitácoras hechas a mano~~ → ya no hace falta: `bench/synthetic.py` genera bitácoras reales pasando por el gateway | — | — | ✅ |
+| Juliana | `ManifestGate.evaluate_tool(server_id, live, seen_owner)` | Adrian (gateway) | 12:30 | ⬜ el gateway ya lo usa en cuanto exista `openwitness.manifests` |
+| Adrian | Gateway que reenvía una sesión completa | Andres (bench §9.2), Juliana (hooks) | **14:00** (punto de decisión de G9) | ✅ con `fake` y con Claude Code real |
+| Andres | Escenarios y `bench/run_bench.py` estable | — (§9.1 ya no depende de esto: usa `bench/synthetic.py`) | 14:00 | ⬜ |
+| Los tres | Números congelados en `results/` | Andres (resumen y ficha) | **15:00** | 🟡 §9.1 y §9.4 preliminares en `results/` |
 
 **Cómo trabajar en el repo:** cada uno en su rama (`adrian/…`, `juliana/…`, `andres/…`), con merges pequeños a `main` en cada punto de control (11:00, 12:30, 14:00, 15:00). Nadie edita los módulos de otro sin avisar. `types.py` solo cambia si los tres están de acuerdo.
+
+**Módulos provisionales.** Para no bloquear a nadie, Adrian dejó en `main` versiones mínimas de módulos que no son suyos, todas marcadas como *provisional* en su docstring:
+- `canonical.py` e `identity/` (de Juliana);
+- `gateway/tool_filter.py` (de Juliana);
+- `llm/config.py` y el `ScriptedResponder` de `llm/fake.py` (de Andres).
+
+Su dueño o dueña puede reescribirlos por completo, con una sola condición: **respetar la firma pública** que usan los demás (la de §7) y que `uv run pytest` siga en verde. Si hace falta cambiar una firma, se avisa antes.
+
+**Arranque:** `uv sync` y `uv run pytest -q`. Los comandos de cada uno están en su hoja y en el README.
 
 ---
 
@@ -1166,11 +1224,14 @@ Encabezado: título, equipo, Track 1 y link al repositorio. Después, las seis s
 - [x] Python 3.14: todas las dependencias instalan.
 - [x] Claude Code en la demo con `ENABLE_TOOL_SEARCH=false`.
 - [x] Equipo y roles: Adrian (gateway y bitácora), Juliana (firmas e integración), Andres (atribución, benchmark y entregables) (§11).
-- [ ] Versión de Claude Code que se fija (la prueba usó 2.1.323).
+- [x] Versión de Claude Code que se fija: **2.1.323** (fixtures en `tests/fixtures/claude_code/2.1.323/`, con y sin búsqueda diferida).
+- [x] Floats: prohibidos en lo firmado, permitidos en los blobs (§6.1).
+- [x] Correspondencia mensaje ↔ entrada para la comprobación 10: `meta.segments` (§6.4).
+- [x] Contrato de `ManifestGate.evaluate_tool(server_id, live, seen_owner)` y `ToolFilter` sin escritura en la bitácora (§7.3).
 - [ ] Valor por defecto de `require_signed_prompts` en la demo.
 - [x] Modelo real para la demo y el benchmark sin créditos: `gpt-oss-20b` local en LM Studio. Claude solo si hay créditos.
 - [ ] Si se intenta el juez (G10) y con qué perfil (`lmstudio` es el candidato natural).
-- [ ] Frecuencia de anclaje (`N`, `T`).
+- [x] Frecuencia de anclaje: `N = 20` entradas o `T = 30` s, y siempre al cerrar (configurable en `[gateway]` con `anchor_every` y `anchor_interval_s`).
 - [ ] Licencia del repositorio (la guía no exige ninguna).
 
 ---

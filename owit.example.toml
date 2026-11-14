@@ -1,0 +1,42 @@
+# Copia a owit.toml (gitignored). Perfiles y política: SPEC §7.5 y §7.7.
+
+[gateway]
+listen = "127.0.0.1:8787"
+upstream = "fake"            # perfil por defecto del upstream: fake | lmstudio | claude
+judge = "lmstudio"           # perfil por defecto del juez (G10)
+anchor_every = 20            # anclar cada N entradas…
+anchor_interval_s = 30       # …o cada T segundos, y siempre al cerrar
+
+[policy]
+require_signed_prompts = false
+strip_untrusted_tools = true
+deny_stripped_tool_calls = true
+unknown_builtin = "allow_and_log"   # o "deny"
+# builtin_allowlist = ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "TodoWrite"]
+
+[llm.profiles.fake]
+provider = "fake"
+model = "fake-model"
+# script = "bench/scripts/default.yaml"
+
+[llm.profiles.claude]
+provider = "anthropic"
+base_url = "https://api.anthropic.com"
+model = "claude-sonnet-5-5"
+api_key_env = "ANTHROPIC_API_KEY"   # nombre de la variable, nunca el valor
+timeout_s = 300
+
+[llm.profiles.lmstudio]
+provider = "anthropic_compat"
+base_url = "http://localhost:1234"  # sin /v1: el cliente agrega /v1/messages
+model = "openai/gpt-oss-20b"        # lms load openai/gpt-oss-20b --context-length 65536
+api_key_env = ""
+timeout_s = 300
+
+[llm.profiles.lmstudio_openai]      # juez y Codex (roadmap)
+provider = "openai_compat"
+protocols = ["chat", "responses"]
+base_url = "http://localhost:1234/v1"
+model = "openai/gpt-oss-20b"
+api_key_env = ""
+timeout_s = 120

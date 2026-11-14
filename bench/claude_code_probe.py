@@ -60,6 +60,9 @@ def main(argv: list[str] | None = None) -> dict:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tool-search", action="store_true", help="dejar la carga diferida de herramientas activa")
     ap.add_argument("--save-fixtures", action="store_true")
+    ap.add_argument("--real-config", action="store_true",
+                    help="usar la configuración real del usuario (~/.claude) para ver si el token de sesión "
+                         "gana sobre un login de suscripción (§5.3)")
     ap.add_argument("--prompt", default="Lee el archivo NOTAS.md y resúmelo en una frase.")
     a = ap.parse_args(argv)
 
@@ -78,12 +81,15 @@ def main(argv: list[str] | None = None) -> dict:
                                                 "agent": {"name": "claude-code", "version": version}}).json()
     env = {k: v for k, v in os.environ.items() if not k.startswith(("ANTHROPIC_", "CLAUDE_"))}
     env.update({"ANTHROPIC_BASE_URL": f"{srv.url}/s/{j['sid']}", "ANTHROPIC_AUTH_TOKEN": j["token"],
-                "CLAUDE_CONFIG_DIR": str(home), "DISABLE_TELEMETRY": "1", "DISABLE_AUTOUPDATER": "1",
+                "DISABLE_TELEMETRY": "1", "DISABLE_AUTOUPDATER": "1",
                 "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"})
+    if not a.real_config:
+        env["CLAUDE_CONFIG_DIR"] = str(home)
     if not a.tool_search:
         env["ENABLE_TOOL_SEARCH"] = "false"
     p = subprocess.run(["claude", "-p", a.prompt, "--output-format", "json", "--allowedTools", "Read"],
-                       cwd=work, env=env, capture_output=True, text=True, timeout=180)
+                       cwd=work, env=env, capture_output=True, text=True, timeout=180,
+                       stdin=subprocess.DEVNULL)
     httpx.post(srv.url + f"/s/{j['sid']}/end", headers={"x-api-key": j["token"]}, json={"reason": "probe"})
     sess = gw.sessions[j["sid"]]
     rep = verify_ledger(gw.ledger_path(j["sid"]), gw.blobs, gw.kp.public_str(), gw.registry, gw.anchor)
@@ -92,7 +98,7 @@ def main(argv: list[str] | None = None) -> dict:
     for r in recs:
         if r.kind == "user_text_unsigned":
             reasons[r.meta["reason"]] = reasons.get(r.meta["reason"], 0) + 1
-    result = {"claude_code": version, "tool_search": a.tool_search, "exit_code": p.returncode,
+    result = {"claude_code": version, "tool_search": a.tool_search, "real_config": a.real_config, "exit_code": p.returncode,
               "claude_result": (json.loads(p.stdout).get("result") if p.stdout.strip().startswith("{") else
                                 p.stdout[-500:]),
               "stderr": p.stderr[-500:], "integrity_ok": rep.ok, "errors": [e.to_dict() for e in rep.errors][:5],

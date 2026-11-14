@@ -1,0 +1,14 @@
+§9.1 dentro del modelo de amenazas: 364/364
+  Editar el payload (blob)                                    39/39 
+  Editar un campo de entry                                    40/40 
+  Recalcular el hash sin la llave del gateway                 40/40 
+  Borrar una entrada intermedia                               38/38 
+  Reordenar entradas                                          38/38 
+  Insertar una entrada                                        40/40 
+  Duplicar o reproducir una entrada                           40/40 
+  Reemplazar un prompt firmado (operador con gateway_sk)       4/4  
+  Quitar un mensaje del blob de un llm_request (con gateway_sk)  15/15 
+  Operador con gateway_sk reescribe la cadena                 34/34 
+  Operador trunca la cola ya anclada                          36/36 
+  Operador trunca la cola no anclada (L3)                      0/4  
+  Cola no anclada truncada, con recibo del usuario             2/2  

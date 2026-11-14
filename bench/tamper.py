@@ -1,6 +1,6 @@
 """Bench §9.1: detección de manipulación de la bitácora (meta: 100 % dentro del modelo de amenazas).
 
-Genera sesiones válidas (por defecto sintéticas a través del gateway; con `--ledgers` toma las de `refagent`),
+Genera sesiones válidas pasando por el gateway real en proceso (`bench/synthetic.py`, upstream `fake`),
 les aplica las 12 mutaciones de la tabla de §9.1 en varias posiciones y cuenta cuántas detecta `verify_ledger`.
 
     uv run python -m bench.tamper --out results/

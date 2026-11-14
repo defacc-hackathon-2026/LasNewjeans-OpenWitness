@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator
@@ -62,6 +63,7 @@ class Gateway:
         if self.record_dir:
             self.record_dir.mkdir(parents=True, exist_ok=True)
         self._bg: set[asyncio.Task] = set()
+        self.timings: list[dict] = []          # ms por petición: filtrado, descomposición, respuesta (§9.4)
 
     # ------------------------------------------------------------------ sesiones
     def ledger_path(self, sid: str) -> Path:
@@ -140,8 +142,10 @@ class Gateway:
     async def proxy_messages(self, s: Session, body: dict, headers: dict[str, str], query: str) -> Forwarded:
         up = self.upstreams[s.upstream]
         async with s.lock:
+            t0 = time.perf_counter()
             req0 = self.adapter.parse_request(body)
             decisions, rejected = self.decomposers[s.sid].filter_tools(s, req0)
+            t1 = time.perf_counter()
             fwd = self.adapter.strip_tools(body, rejected)
             if hasattr(up, "prepare"):
                 fwd = up.prepare(fwd)
@@ -151,6 +155,7 @@ class Gateway:
             outcome = self.decomposers[s.sid].on_request(
                 s, req, offered=offered, stripped=stripped, upstream=up.describe(),
                 extra_meta={"model_requested": body.get("model"), "model_forwarded": fwd.get("model")})
+            self.timings.append({"filter_ms": (t1 - t0) * 1000, "decompose_ms": (time.perf_counter() - t1) * 1000})
         if outcome.rejected:
             err = {"type": "error", "error": {"type": "permission_error",
                                               "message": "Open Witness: el turno trae texto de usuario sin firma "
@@ -210,7 +215,10 @@ class Gateway:
 
     async def _on_response(self, s: Session, req_rec: LedgerRecord, resp) -> None:
         async with s.lock:
+            t0 = time.perf_counter()
             self.decomposers[s.sid].on_response(s, req_rec, resp)
+            if self.timings:
+                self.timings[-1]["response_ms"] = (time.perf_counter() - t0) * 1000
         self._anchor_soon(s)
 
     def _anchor_soon(self, s: Session) -> None:
