@@ -95,7 +95,7 @@
 
 **15:00–16:00 — entregables (tú envías)**
 - [ ] **15:00:** tomar los números de `results/` y completar el resumen (150–250 palabras, §13.2).
-- [ ] Ficha técnica: escribir "Amenaza", "Límites" y "Doble uso" y ensamblar las secciones de Adrian y Juliana. **Máximo 2 páginas** y exportar a PDF. `pandoc` no estaba instalado en la máquina de Adrian: instalarlo antes o exportar desde el navegador.
+- [ ] Ficha técnica: "Método" y "Resultados" ya están en `docs/ficha/metodo.md` y `docs/ficha/resultados.md` (de Adrian); faltan tus filas en la tabla de resultados. Escribir "Amenaza", "Límites" y "Doble uso" y ensamblar las secciones de Adrian y Juliana. **Máximo 2 páginas** y exportar a PDF. `pandoc` ya está instalado en la máquina de Adrian.
 - [ ] README con citas y uso de IA (§10.4).
 - [ ] **15:45–16:00: enviar el formulario** con la lista de §13.4.
 - [ ] 16:00–17:00: ensayar el pitch de 3 minutos (§13.1) con cronómetro.

@@ -45,6 +45,8 @@ Los endpoints están en SPEC §7.5.
 uv run python -m bench.tamper --out results        # §9.1 detección de manipulación
 uv run python -m bench.latency --n 1000 --out results   # §9.4 latencia agregada
 uv run python -m bench.claude_code_probe           # Claude Code real → gateway → fake (sin API key)
+uv run python -m bench.local_model --runs 5        # agente → gateway → LM Studio (gpt-oss-20b)
+uv run python -m bench.demo && bash demo/demo.sh   # demo de integridad (SPEC §13.1)
 ```
 
 Resultados preliminares (14 de noviembre, upstream `fake`, localhost):
@@ -56,7 +58,8 @@ Resultados preliminares (14 de noviembre, upstream `fake`, localhost):
 | Latencia añadida hasta el primer byte, p50 | +1,0 ms (petición pequeña); +2,2 ms (petición de Claude Code de 75 KB) |
 | Latencia añadida total, p50 | +1,4 ms; +2,6 ms |
 | `append()` p50 | 0,3–0,4 ms |
-| Claude Code 2.1.323 real a través del gateway | integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
+| Claude Code 2.1.323 real a través del gateway (con `fake` y con `gpt-oss-20b`) | integridad OK, 0 `history_mismatch`; con prompt firmado, 0 textos sin emparejar |
+| `gpt-oss-20b` local ante una inyección sutil | el modelo cayó 5/5; bitácora íntegra 10/10 |
 
 Faltan la atribución (§9.2) y los manifiestos (§9.3).
 

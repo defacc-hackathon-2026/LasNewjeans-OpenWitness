@@ -54,3 +54,6 @@ temp/
 owit.toml
 keys/
 data/
+
+# Demo generada (bench/demo.py)
+demo/

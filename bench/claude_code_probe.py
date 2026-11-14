@@ -56,6 +56,10 @@ def sanitize(obj, tmp: Path):
     return d
 
 
+def s_requests(gw, sid: str) -> int:
+    return gw.sessions[sid].stats["requests"]
+
+
 def main(argv: list[str] | None = None) -> dict:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tool-search", action="store_true", help="dejar la carga diferida de herramientas activa")
@@ -63,6 +67,9 @@ def main(argv: list[str] | None = None) -> dict:
     ap.add_argument("--real-config", action="store_true",
                     help="usar la configuración real del usuario (~/.claude) para ver si el token de sesión "
                          "gana sobre un login de suscripción (§5.3)")
+    ap.add_argument("--lmstudio", default=None, metavar="URL",
+                    help="usar un modelo real local (p. ej. http://localhost:1234) en vez del fake")
+    ap.add_argument("--model", default="openai/gpt-oss-20b")
     ap.add_argument("--prompt", default="Lee el archivo NOTAS.md y resúmelo en una frase.")
     a = ap.parse_args(argv)
 
@@ -73,8 +80,14 @@ def main(argv: list[str] | None = None) -> dict:
     (work / "NOTAS.md").write_text("# Notas\nEl proyecto demo tiene dos issues abiertos.\n")
     steps = json.loads(json.dumps(SCRIPT).replace("{work}", str(work)))
     fake = FakeUpstream(LLMProfile("fake", "fake", model="fake-model"), responder=ScriptedResponder(steps))
-    gw = Gateway(tmp / "data", KeyPair.generate(), KeyRegistry(), upstreams={"fake": fake},
-                 default_upstream="fake", record_dir=rec, anchor_every=10)
+    if a.lmstudio:
+        from openwitness.llm.anthropic_upstream import AnthropicUpstream
+        up = AnthropicUpstream(LLMProfile("lmstudio", "anthropic_compat", model=a.model, base_url=a.lmstudio,
+                                          timeout_s=600))
+    else:
+        up = fake
+    gw = Gateway(tmp / "data", KeyPair.generate(), KeyRegistry(), upstreams={up.profile.name: up},
+                 default_upstream=up.profile.name, record_dir=rec, anchor_every=10)
     srv = ServerThread(gw.app()).start()
     version = claude_version()
     j = httpx.post(srv.url + "/sessions", json={"user_id": "alice",
@@ -88,7 +101,7 @@ def main(argv: list[str] | None = None) -> dict:
     if not a.tool_search:
         env["ENABLE_TOOL_SEARCH"] = "false"
     p = subprocess.run(["claude", "-p", a.prompt, "--output-format", "json", "--allowedTools", "Read"],
-                       cwd=work, env=env, capture_output=True, text=True, timeout=180,
+                       cwd=work, env=env, capture_output=True, text=True, timeout=900,
                        stdin=subprocess.DEVNULL)
     httpx.post(srv.url + f"/s/{j['sid']}/end", headers={"x-api-key": j["token"]}, json={"reason": "probe"})
     sess = gw.sessions[j["sid"]]
@@ -103,7 +116,9 @@ def main(argv: list[str] | None = None) -> dict:
                                 p.stdout[-500:]),
               "stderr": p.stderr[-500:], "integrity_ok": rep.ok, "errors": [e.to_dict() for e in rep.errors][:5],
               "stats": sess.stats, "unsigned_reasons": reasons, "entries": len(recs),
-              "kinds": sorted({r.kind for r in recs}), "upstream_requests": len(fake.requests)}
+              "kinds": sorted({r.kind for r in recs}), "upstream": up.profile.name,
+              "tool_calls": [r.meta.get("tool") for r in recs if r.kind == "tool_call"],
+              "upstream_requests": len(fake.requests) if up is fake else s_requests(gw, j["sid"])}
     print(json.dumps(result, indent=1, ensure_ascii=False))
     if a.save_fixtures:
         dest = FIXTURES / version / ("tool-search" if a.tool_search else "no-tool-search")

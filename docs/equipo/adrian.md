@@ -22,6 +22,10 @@ Todo está en `main`. `uv run pytest -q` queda en verde.
 | Pendiente de §5.3: ¿el token de sesión gana sobre el login de suscripción? | §5.3 | ✅ sí, con la configuración real (`bench/claude_code_probe.py --real-config`) |
 | Bench §9.1 (12 mutaciones) | §9.1 | ✅ 364/364 dentro del modelo; cola no anclada 0/4 sin recibo (L3) y 2/2 con recibo |
 | Bench §9.4 (latencia) | §9.4 | ✅ +1,0 ms (refagent) y +2,2 ms (petición de Claude Code de 75 KB) hasta el primer byte (p50); `append()` ≈ 0,3–0,4 ms; hook ≈ 92 ms (aproximado, hasta que exista `owit hook`) |
+| Upstream `anthropic_compat` con LM Studio (`gpt-oss-20b`) | §7.7 | ✅ `bench/local_model.py`: 10/10 bitácoras íntegras, 0 `history_mismatch`; el modelo cae 5/5 en la inyección sutil |
+| Claude Code → gateway → LM Studio | §9.5 | ✅ `bench/claude_code_probe.py --lmstudio http://localhost:1234`: lee `NOTAS.md` con `Read`, contesta bien e integridad OK |
+| Demo de integridad (§13.1) | §13.1 | ✅ `uv run python -m bench.demo && bash demo/demo.sh` (`FULL=1` agrega la reescritura con la llave del gateway). Falta el paso de atribución (Andres) y grabarla |
+| Ficha: "Método" y "Resultados" | §13.3 | ✅ borrador en `docs/ficha/metodo.md` y `docs/ficha/resultados.md`; faltan las filas de §9.2 (Andres) y §9.3 (Juliana) |
 
 Cómo reproducir:
 
@@ -31,6 +35,9 @@ uv run pytest -q
 uv run python -m bench.tamper --out results
 uv run python -m bench.latency --n 1000 --out results
 uv run python -m bench.claude_code_probe            # Claude Code real → gateway → fake
+uv run python -m bench.local_model --runs 5         # agente → gateway → LM Studio (gpt-oss-20b)
+uv run python -m bench.claude_code_probe --lmstudio http://localhost:1234
+uv run python -m bench.demo && bash demo/demo.sh    # demo de integridad (§13.1)
 ```
 
 ## Lo que entregas a los demás
@@ -57,14 +64,12 @@ uv run python -m bench.claude_code_probe            # Claude Code real → gatew
 - [ ] **G9 con Juliana:** Claude Code real con los hooks.
   - Ampliar `bench/claude_code_probe.py` para instalar los hooks en el `CLAUDE_CONFIG_DIR` temporal y usar los servidores MCP de demo de Andres.
   - Meta: 0 textos sin emparejar con el prompt firmado.
-- [ ] Probar `anthropic_compat` contra LM Studio (`lms server start`, `lms load openai/gpt-oss-20b --context-length 65536`) con `refagent` y con Claude Code.
+- [ ] Agregar a `demo/demo.sh` el paso de atribución con `owit attribute`, cuando Andres lo tenga:
+  - inyección sutil → `TOOL_INJECTED(mcp:issues)` parcial;
+  - Mallory → `USER_INSTRUCTED`, con no repudio.
+- [ ] Grabar la demo: `brew install asciinema`, `asciinema rec docs/demo.cast -c "PAUSE=2 FULL=1 bash demo/demo.sh"`.
 - [ ] Bench §9.4: volver a medir el hook con `owit hook pre-tool` real (lo detecta solo si existe `openwitness.integrations.hooks`).
-- [ ] Grabar la demo en terminal (asciinema, §13.1):
-  - inyección sutil;
-  - Mallory;
-  - `owit tamper` borra el prompt de Mallory;
-  - `owit verify` falla.
-- [ ] Congelar los números en `results/` y escribir "Método de evaluación" y "Resultados" en `docs/ficha_tecnica.md`.
+- [ ] **15:00:** volver a correr todos los benchmarks sobre `main` y congelar `results/` y la tabla de `docs/ficha/resultados.md`.
 - [ ] *(si sobra)* Rekor real (G11).
 
 ## Listo cuando

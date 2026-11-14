@@ -94,12 +94,18 @@ def gateway_start(config: Path = typer.Option(Path("owit.toml"), help="owit.toml
     uvicorn.run(gw.app(), host=host or "127.0.0.1", port=int(port), log_level="warning")
 
 
+CHECK_NAMES = {1: "hash", 2: "firma del gateway", 3: "cadena y secuencia", 4: "referencias de contexto",
+               5: "prompts firmados", 6: "herramientas aceptadas", 7: "ancla externa", 8: "recibos del usuario",
+               9: "blobs", 10: "coherencia del contexto"}
+
+
 @app.command("verify")
 def verify_cmd(ledger: Path, data: Path = typer.Option(DATA),
                registry: Path = typer.Option(Path("keys/registry.json")),
                receipts: Optional[Path] = typer.Option(None, help="archivo o directorio de recibos"),
                gateway_pubkey: Optional[str] = typer.Option(None, help="por defecto, la de data/gateway.key"),
-               as_json: bool = typer.Option(False, "--json")):
+               as_json: bool = typer.Option(False, "--json"),
+               verbose: bool = typer.Option(False, "--verbose", "-v", help="listar cada error")):
     """Verifica la integridad de una bitácora (las 10 comprobaciones de §7.4)."""
     from .ledger import BlobStore, MockAnchor, verify_ledger
     pub = gateway_pubkey or _gateway_key(data).public_str()
@@ -119,8 +125,19 @@ def verify_cmd(ledger: Path, data: Path = typer.Option(DATA),
         missing = sum(1 for v in rep.blob_status.values() if v == "missing")
         if missing:
             typer.echo(f"  blobs ausentes (borrado por privacidad): {missing}")
-        for e in rep.errors:
-            typer.echo(f"  [{e.check}] seq={e.seq} {e.error} {e.detail}")
+        if rep.errors:
+            by_check: dict[int, list] = {}
+            for e in rep.errors:
+                by_check.setdefault(e.check, []).append(e)
+            first = rep.first_error_seq()
+            typer.echo(f"  primera entrada afectada: seq={first} · {len(rep.errors)} errores")
+            for chk in sorted(by_check):
+                es = by_check[chk]
+                kinds = sorted({e.error for e in es})
+                typer.echo(f"  [{chk}] {CHECK_NAMES.get(chk, '')}: {', '.join(kinds)} ({len(es)})")
+            if verbose:
+                for e in rep.errors:
+                    typer.echo(f"    [{e.check}] seq={e.seq} {e.error} {e.detail}")
     raise typer.Exit(0 if rep.ok else 1)
 
 
