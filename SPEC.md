@@ -1191,6 +1191,8 @@ Borrador, a ajustar con los números reales a las 15:00 (unas 190 palabras):
 ### 13.3 Ficha técnica (PDF, máximo 2 páginas y 10 MB)
 Se escribe en `docs/ficha_tecnica.md` y se exporta a PDF (con pandoc o desde el navegador). Hay que comprobar que queda en 2 páginas antes de las 15:45.
 
+Para no pisarse, cada responsable escribe su sección en `docs/ficha/<sección>.md` (`amenaza`, `defensa`, `metodo`, `resultados`, `limites`, `doble_uso`), y Andres las ensambla en `docs/ficha_tecnica.md`. `pandoc` ya está instalado en la máquina de Adrian.
+
 Encabezado: título, equipo, Track 1 y link al repositorio. Después, las seis secciones que exige la guía:
 
 | Sección | Contenido | Fuente en el SPEC | Responsable |

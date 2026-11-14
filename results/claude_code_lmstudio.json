@@ -1,0 +1,42 @@
+{
+ "claude_code": "2.1.323",
+ "tool_search": false,
+ "real_config": false,
+ "exit_code": 0,
+ "claude_result": "El proyecto demo tiene dos issues abiertos.",
+ "stderr": "",
+ "integrity_ok": true,
+ "errors": [],
+ "stats": {
+  "requests": 2,
+  "history_mismatch": 0,
+  "unmatched_user_text": 1,
+  "agent_injected": 1,
+  "system_role": 1,
+  "threads": 1,
+  "context_reset": 0,
+  "rejected_unsigned": 0
+ },
+ "unsigned_reasons": {
+  "agent_injected": 1,
+  "no_hook": 1,
+  "system_role": 1
+ },
+ "entries": 34,
+ "kinds": [
+  "anchor",
+  "llm_request",
+  "llm_response",
+  "manifest_decision",
+  "session_end",
+  "session_start",
+  "tool_call",
+  "tool_result",
+  "user_text_unsigned"
+ ],
+ "upstream": "lmstudio",
+ "tool_calls": [
+  "Read"
+ ],
+ "upstream_requests": 2
+}

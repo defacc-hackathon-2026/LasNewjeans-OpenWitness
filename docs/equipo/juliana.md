@@ -78,7 +78,7 @@ Eso lo hace el gateway (`gateway/decompose.py` y `protocols/anthropic_messages.p
 
 **15:00–16:00 — cierre**
 - [ ] Bench §9.3 en `results/manifests.json`.
-- [ ] Escribir "Defensa" en `docs/ficha_tecnica.md`: el diagrama y los tres mecanismos en pocas líneas.
+- [ ] Escribir "Defensa" en `docs/ficha/defensa.md` (Andres la ensambla en `docs/ficha_tecnica.md`): el diagrama y los tres mecanismos en pocas líneas. Tu fila de §9.3 va en la tabla de `docs/ficha/resultados.md`.
 
 ## Listo cuando
 

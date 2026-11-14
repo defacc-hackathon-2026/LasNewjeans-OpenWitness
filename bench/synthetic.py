@@ -45,17 +45,19 @@ class Env:
         return self.gateway.kp.public_str()
 
 
-def make_env(root: Path | str, anchor_every: int = 5, responder=None) -> Env:
+def make_env(root: Path | str, anchor_every: int = 5, responder=None, upstream=None) -> Env:
+    """`upstream`: cualquier `Upstream` (p. ej. LM Studio); por defecto, el `fake` en proceso con `responder`."""
     root = Path(root)
     users = {u: KeyPair.generate() for u in ("alice", "mallory")}
     reg = KeyRegistry()
     for u, k in users.items():
         reg.register(u, k.public_str())
     anchor = MockAnchor(root / "anchor" / "mock_anchor.jsonl")
-    fake = FakeUpstream(LLMProfile("fake", "fake", model="fake-model"), responder=responder)
-    gw = Gateway(root, KeyPair.generate(), reg, upstreams={"fake": fake}, default_upstream="fake", anchor=anchor,
+    up = upstream or FakeUpstream(LLMProfile("fake", "fake", model="fake-model"), responder=responder)
+    name = up.profile.name
+    gw = Gateway(root, KeyPair.generate(), reg, upstreams={name: up}, default_upstream=name, anchor=anchor,
                  anchor_every=anchor_every)
-    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=gw.app()), base_url="http://gw")
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=gw.app()), base_url="http://gw", timeout=600)
     return Env(root, gw, reg, users, anchor, client)
 
 
