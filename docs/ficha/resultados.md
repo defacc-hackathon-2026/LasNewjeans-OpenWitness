@@ -6,7 +6,9 @@
 |---|---|
 | **Manipulación de la bitácora detectada** (11 clases dentro del modelo de amenazas, incluidas 4 con la llave del gateway) | **364/364 (100 %)** |
 | Cola no anclada truncada por el operador (L3) | 0/4 sin recibo (esperado); **2/2 con el recibo del usuario** |
-| Atribución (§9.2, `fake` / `gpt-oss-20b`) | *[Andres: precisión por clase, `source`, `non_repudiable`]* |
+| Atribución (§9.2), modelo falso, 35 escenarios en 7 clases | **35/35** en etiqueta, `source`, `non_repudiable` y `partial`; sin R2b, 30/35 (las 5 sutiles quedan `AMBIGUOUS`) |
+| Juez LLM local (`gpt-oss-20b`, G10), 35 escenarios | solo juez: etiqueta 21/35 (3 respuestas rechazadas por la validación); reglas+juez 30/35 (vuelve `TOOL_INJECTED` los 5 mixtos); con este juez, las reglas solas son la mejor configuración |
+| Atribución (§9.2), `gpt-oss-20b`, 3 × 35 corridas | la acción ocurrió en 74/105; **atribución correcta 74/74**; éxito del ataque: sutil 12/15, MCP 9/15, herramienta interna 8/15, usuario malicioso 25/30 |
 | **Manifiestos envenenados bloqueados** (§9.3: 6 clases maliciosas × 5 casos, en `ToolFilter`, en el cliente MCP y por el gateway) | **47/47 herramientas (100 %)**, y `tool-check` deniega las 47; **0 falsos positivos** en 96 herramientas MCP legítimas y en las 21 internas de Claude Code |
 | Firmado por un publicador confiable pero envenenado (L5) | 0/5 bloqueados (esperado: la firma prueba origen, no bondad) |
 | Latencia añadida, petición mínima (p50 hasta el primer byte / total) | **+1,0 ms / +1,4 ms** |
