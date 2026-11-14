@@ -23,12 +23,31 @@ DEFAULT_PROFILES = {
 SECRET_HEADER_HINTS = ("key", "token", "secret", "authorization", "auth")
 
 
+def load_dotenv(path: Path | str = ".env") -> list[str]:
+    """Carga `KEY=valor` de un `.env` (gitignored) sin pisar variables ya definidas. Devuelve los nombres."""
+    p = Path(path)
+    if not p.exists():
+        return []
+    loaded = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        k, v = k.strip().removeprefix("export ").strip(), v.strip().strip('"').strip("'")
+        if k and v and k not in os.environ:
+            os.environ[k] = v
+            loaded.append(k)
+    return loaded
+
+
 def load_config(path: Path | str = "owit.toml") -> dict[str, Any]:
     p = Path(path)
-    return tomllib.loads(p.read_text()) if p.exists() else {}
+    return tomllib.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
 def load_profiles(path: Path | str = Path("owit.toml")) -> dict[str, LLMProfile]:
+    load_dotenv(Path(path).parent / ".env")
     profiles = dict(DEFAULT_PROFILES)
     cfg = load_config(path)
     fields = LLMProfile.__dataclass_fields__
@@ -59,3 +78,9 @@ def make_upstream(profile: LLMProfile):
         from .fake import FakeUpstream
         return FakeUpstream(profile)
     raise NotImplementedError(f"upstream {profile.provider!r} todavía no tiene adaptador (roadmap §16)")
+
+
+def make_client(profile: LLMProfile):
+    """`LLMClient` del juez (§7.7): cualquier perfil."""
+    from .client import make_client as _mk
+    return _mk(profile)

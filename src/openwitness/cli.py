@@ -185,6 +185,113 @@ def llm_list(config: Path = typer.Option(Path("owit.toml"))):
                    f"{json.dumps(redact_headers(p.headers)) if p.headers else ''}")
 
 
+@llm_app.command("check")
+def llm_check(profile: str = typer.Option(..., "--profile"), config: Path = typer.Option(Path("owit.toml"))):
+    """Conectividad, modelos y una llamada con JSON (§7.7). Nunca imprime secretos."""
+    from .llm.client import check_profile
+    from .llm.config import load_profiles
+    profs = load_profiles(config)
+    if profile not in profs:
+        raise typer.BadParameter(f"perfiles: {', '.join(profs)}")
+    res = check_profile(profs[profile])
+    typer.echo(json.dumps(res, indent=1, ensure_ascii=False))
+    raise typer.Exit(0 if res.get("ok") else 1)
+
+
+# ---------------------------------------------------------------- atribución (Andres, §7.9)
+
+def _verify_for_attribution(ledger: Path, data: Path, registry: Path, gateway_pubkey: Optional[str]):
+    from .ledger import BlobStore, MockAnchor, verify_ledger
+    blobs = BlobStore(data / "blobs")
+    pub = gateway_pubkey or _gateway_key(data).public_str()
+    rep = verify_ledger(ledger, blobs, pub, _registry(registry), MockAnchor(data / "anchor" / "mock_anchor.jsonl"))
+    return blobs, rep
+
+
+@app.command("attribute")
+def attribute_cmd(ledger: Path, seq: Optional[int] = typer.Option(None, help="seq del tool_call; por defecto, todos"),
+                  data: Path = typer.Option(DATA), registry: Path = typer.Option(Path("keys/registry.json")),
+                  gateway_pubkey: Optional[str] = typer.Option(None),
+                  judge: Optional[str] = typer.Option(None, help="perfil del juez (G10)"),
+                  no_judge: bool = typer.Option(False, "--no-judge", help="solo reglas"),
+                  config: Path = typer.Option(Path("owit.toml")), as_json: bool = typer.Option(False, "--json")):
+    """¿Lo pidió el usuario o lo inyectó la herramienta Z? Integridad primero, luego reglas (y juez)."""
+    from .attribution import attribute_evidence, build_evidence
+    from .ledger import load_records
+    blobs, rep = _verify_for_attribution(ledger, data, registry, gateway_pubkey)
+    llm = None
+    if judge and not no_judge:
+        from .llm.config import load_profiles, make_client
+        llm = make_client(load_profiles(config)[judge])
+    recs = load_records(ledger)
+    seqs = [seq] if seq is not None else [r.seq for r in recs if r.kind == "tool_call"]
+    out = []
+    for s in seqs:
+        ev = build_evidence(ledger, blobs, s, rep, recs)
+        v, trace = attribute_evidence(ev, llm, "rules+judge" if llm else "rules")
+        d = v.to_dict() | {"seq": s, "tool": ev.tool, "args": ev.args, "rule": trace.get("rule")}
+        out.append(d)
+        if not as_json:
+            extra = " · parcial: acción pedida por el usuario, argumento aportado por la herramienta" if v.partial else ""
+            typer.echo(f"seq={s} {ev.tool} → {v.label}({v.source or '-'}) · no repudio={v.non_repudiable} · "
+                       f"regla {trace.get('rule')} · método {v.method}{extra}")
+            for arg, provs in v.arg_provenance.items():
+                typer.echo(f"    {arg}: {', '.join(provs) or 'no aparece en el contexto'}")
+    if as_json:
+        typer.echo(json.dumps(out, indent=1, ensure_ascii=False))
+    if not rep.ok:
+        typer.echo(f"integridad: FALLA desde seq={rep.first_error_seq()}", err=True)
+
+
+@app.command("show")
+def show_cmd(ledger: Path, seq: int = typer.Option(...), data: Path = typer.Option(DATA),
+             registry: Path = typer.Option(Path("keys/registry.json")),
+             gateway_pubkey: Optional[str] = typer.Option(None), width: int = 160):
+    """Reconstruye y muestra el contexto exacto que vio el modelo antes de la acción `seq`."""
+    from .attribution import build_evidence
+    blobs, rep = _verify_for_attribution(ledger, data, registry, gateway_pubkey)
+    ev = build_evidence(ledger, blobs, seq, rep)
+    typer.echo(f"acción seq={seq}: {ev.tool} {json.dumps(ev.args, ensure_ascii=False)[:width]}")
+    typer.echo(f"integridad hasta seq={seq}: {'OK' if ev.integrity_ok else 'FALLA'} · "
+               f"llm_request seq={ev.request.seq if ev.request else '-'}")
+    for i in ev.items:
+        frag = i.fragment.replace("\n", " ⏎ ")
+        typer.echo(f"  [{i.seq:>3}] {i.provenance:<22} {i.kind:<18} {frag[:width]}")
+
+
+agent_app = typer.Typer(no_args_is_help=True, help="Agente de referencia (§7.8)")
+app.add_typer(agent_app, name="agent")
+
+
+@agent_app.command("run")
+def agent_cmd(scenario: Path = typer.Option(..., help="bench/scenarios/<id>.yaml"),
+              upstream: str = typer.Option("fake", help="fake o un perfil de owit.toml"),
+              config: Path = typer.Option(Path("owit.toml"))):
+    """Ejecuta un escenario con refagent a través del gateway en proceso y atribuye la acción esperada."""
+    import asyncio
+    import yaml
+    from bench.run_bench import run_one
+    from .llm.config import load_profiles, make_upstream
+    s = yaml.safe_load(scenario.read_text(encoding="utf-8"))
+    up, model = None, "fake-model"
+    if upstream != "fake":
+        prof = load_profiles(config)[upstream]
+        up, model = make_upstream(prof), prof.model
+    r = asyncio.run(run_one(s, up, model))
+    typer.echo(json.dumps({k: r[k] for k in ("id", "occurred", "integrity_ok", "tool_calls", "verdicts", "error")},
+                          indent=1, ensure_ascii=False))
+
+
+@bench_app.command("attribution")
+def bench_attribution(out: Path = typer.Option(Path("results")), upstream: str = typer.Option("fake"),
+                      judge: Optional[str] = typer.Option(None), runs: int = 1,
+                      only: Optional[str] = typer.Option(None)):
+    """§9.2: precisión de la atribución sobre los 35 escenarios."""
+    from bench.run_bench import main
+    main(["--out", str(out), "--upstream", upstream, "--runs", str(runs)] + (["--judge", judge] if judge else [])
+         + (["--only", only] if only else []))
+
+
 @app.command("fake")
 def fake_serve(port: int = 8788, script: Optional[Path] = None):
     """Sirve el modelo falso por HTTP (protocolo Anthropic)."""
