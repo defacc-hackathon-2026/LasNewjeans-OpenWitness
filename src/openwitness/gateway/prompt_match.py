@@ -19,7 +19,10 @@ def remainder(text: str, content: str) -> str:
     return normalize_text(normalize_text(text).replace(content, "", 1))
 
 
-AGENT_MARKERS = ("<system-reminder>", "<command-name>", "<local-command-stdout>", "<command-message>")
+AGENT_MARKERS = ("<system-reminder>", "<command-name>", "<local-command-stdout>", "<command-message>",
+                 # Codex (§17.4): contexto que el agente agrega con rol `user`
+                 "<environment_context>", "<user_instructions>", "<turn_aborted>", "# AGENTS.md instructions",
+                 "<user_shell_command>", "<skills_instructions>", "<apps_instructions>")
 
 
 def looks_agent_injected(text: str) -> bool:

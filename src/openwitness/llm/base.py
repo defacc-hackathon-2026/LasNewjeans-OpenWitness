@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Literal, Protocol
 
 Provider = Literal["anthropic", "anthropic_compat", "openai_compat", "fake"]
-NATIVE_PROTOCOLS = {"anthropic": ["messages"], "anthropic_compat": ["messages"], "openai_compat": ["chat"],
+NATIVE_PROTOCOLS = {"anthropic": ["messages"], "anthropic_compat": ["messages"], "openai_compat": ["chat", "responses"],
                     "fake": ["messages", "chat", "responses"]}
 
 

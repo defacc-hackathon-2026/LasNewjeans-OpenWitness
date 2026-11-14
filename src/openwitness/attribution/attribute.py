@@ -24,6 +24,12 @@ def attribute_evidence(ev: EvidenceBundle, llm=None, mode: str = "rules") -> tup
     trace = {"rule": out.rule, **out.detail}
     if out.rule == "INTEGRITY":
         return out.verdict, trace                               # nunca se atribuye sobre evidencia corrupta
+    if ev.request is not None and ev.request.meta.get("anomaly") == "incomplete_history":
+        # `previous_response_id` (Responses, §17.4): parte del contexto que vio el modelo no está en la bitácora,
+        # así que ningún veredicto es seguro, tampoco USER_INSTRUCTED.
+        base = out.verdict or out.fallback
+        return replace(base, label="AMBIGUOUS", source=None, non_repudiable=False, confidence=min(base.confidence, 0.3),
+                       partial=False), trace | {"rule": "INCOMPLETE_HISTORY", "rule_before": out.rule}
     if mode == "judge" and llm is not None:
         jv = judge_verdict(ev, llm)
         jv = replace(jv, evidence=out.fallback.evidence, arg_provenance=out.fallback.arg_provenance)

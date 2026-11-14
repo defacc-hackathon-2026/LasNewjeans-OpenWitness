@@ -33,10 +33,11 @@ model = "openai/gpt-oss-20b"        # lms load openai/gpt-oss-20b --context-leng
 api_key_env = ""
 timeout_s = 300
 
-[llm.profiles.lmstudio_openai]      # juez y Codex (roadmap)
+[llm.profiles.lmstudio_openai]      # juez (chat) y Codex (responses, SPEC §17.4)
 provider = "openai_compat"
 protocols = ["chat", "responses"]
 base_url = "http://localhost:1234/v1"
 model = "openai/gpt-oss-20b"
+force_model = true                  # Codex pide sus propios modelos; LM Studio solo conoce los cargados
 api_key_env = ""
 timeout_s = 120

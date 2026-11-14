@@ -51,10 +51,12 @@ class Session:
     ledger: Ledger
     policy: Policy
     upstream: str                          # nombre del perfil
+    protocol: str = "anthropic_messages"   # anthropic_messages | openai_responses (§17.4)
     prompts: list[tuple[str, str]] = field(default_factory=list)      # (contenido normalizado, hash de la entrada)
     threads: dict[str, ThreadState] = field(default_factory=dict)
     tool_calls: dict[str, ToolCallInfo] = field(default_factory=dict)  # tool_use_id -> tool_call
     assistant_refs: dict[str, list[str]] = field(default_factory=dict) # clave del mensaje asistente -> entradas
+    assistant_block_refs: dict[str, list[str]] = field(default_factory=dict)  # clave de cada bloque -> entradas
     tools: ToolState = field(default_factory=ToolState)
     seen_nonces: set[str] = field(default_factory=set)
     receipts: list[dict] = field(default_factory=list)

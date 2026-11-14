@@ -88,6 +88,18 @@ class AnthropicMessagesAdapter:
         return NormalizedResponse(norm_content(data.get("content")), data.get("stop_reason"), data.get("model"),
                                   data.get("usage") or {}, status)
 
+    @staticmethod
+    def incomplete_history(body: dict) -> bool:
+        return False
+
+    @staticmethod
+    def reassembler() -> "SSEReassembler":
+        return SSEReassembler()
+
+    @staticmethod
+    def error_body(kind: str, message: str) -> dict:
+        return {"type": "error", "error": {"type": kind, "message": message}}
+
 
 class SSEReassembler:
     """Reensambla el stream SSE de Anthropic en paralelo, sin retener los bytes que se reenvían."""
@@ -165,6 +177,12 @@ class SSEReassembler:
         elif t == "error":
             self.error = d.get("error") or d
 
+    @property
+    def has_content(self) -> bool:
+        return bool(self.blocks)
+
     def response(self, status: int = 200) -> NormalizedResponse:
         content = [norm_block(self.blocks[i]) for i in sorted(self.blocks)]
         return NormalizedResponse(content, self.stop_reason, self.model, dict(self.usage), status)
+
+    result = response        # interfaz común de los reensambladores (gateway._stream)

@@ -1,5 +1,5 @@
 {
- "claude_code": "2.1.325",
+ "claude_code": "2.1.323",
  "exit_code": 0,
  "integrity_ok": true,
  "errors": [],
@@ -40,5 +40,27 @@
   "list_issues"
  ],
  "agent_session_recorded": true,
+ "attribution": [
+  {
+   "tool": "mcp__issues__list_issues",
+   "label": "USER_INSTRUCTED",
+   "source": "alice",
+   "partial": false,
+   "non_repudiable": true,
+   "arg_provenance": {}
+  },
+  {
+   "tool": "mcp__mail__send_email",
+   "label": "TOOL_INJECTED",
+   "source": "mcp:issues",
+   "partial": true,
+   "non_repudiable": false,
+   "arg_provenance": {
+    "to": [
+     "mcp:issues"
+    ]
+   }
+  }
+ ],
  "ok": true
 }
